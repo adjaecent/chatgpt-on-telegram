@@ -1,6 +1,9 @@
 {:deps {org.clojure/clojure {:mvn/version "1.12.0"}
         aero/aero {:mvn/version "1.1.6"}
-        com.openai/openai-java {:mvn/version "1.6.1"}}
+        com.openai/openai-java {:mvn/version "1.6.1"}
+        org.telegram/telegrambots-meta {:mvn/version "8.3.0"}
+        org.telegram/telegrambots-longpolling {:mvn/version "8.3.0"}
+        org.telegram/telegrambots-client {:mvn/version "8.3.0"}}
  :paths [:clj-paths :resource-paths]
  :aliases {:clj-paths ["src"]
            :resource-paths ["resources"]}}

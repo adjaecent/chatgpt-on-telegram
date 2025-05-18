@@ -8,9 +8,9 @@
            [java.util.concurrent CompletableFuture]
            [java.time Duration]))
 
-(def client (-> (OpenAIOkHttpClient/builder)
-                (.apiKey (-> (c/fetch) (c/openai-key)))
-                (.build)))
+(def api-token (-> (c/fetch) (c/openai-key)))
+(def gpt-4 (ChatModel/GPT_4))
+(def client (-> (OpenAIOkHttpClient/builder) (.apiKey api-token) (.build)))
 
 (defn async-stream-handler [chunk-process-fn chunk-complete-fn]
   (reify com.openai.core.http.AsyncStreamResponse$Handler
@@ -19,13 +19,15 @@
     (onComplete [this error]
       (chunk-complete-fn this error))))
 
-(defn on-chunk-process [^ChatCompletionChunk chunk]
-  (mapcat (fn [choice]
-            (print (-> choice
-                       (.delta)
-                       (.content)
-                       (.orElse nil))))
-          (.choices chunk)))
+(defn on-chunk-process [process-fn]
+  (fn [^ChatCompletionChunk chunk]
+    (mapcat (fn [choice]
+              (print "processing choice:" choice)
+              (process-fn (-> choice
+                              (.delta)
+                              (.content)
+                              (.orElse nil))))
+            (.choices chunk))))
 
 (defn on-chunk-complete [unused error]
   (if (.isPresent error)
@@ -37,7 +39,7 @@
     (println "Stream did not finish. Something went wrong!")
     (println "No more chunks left.")))
 
-(defn chat-completion-streaming [^OpenAIClient client ^ChatModel model msg]
+(defn chat-completion-streaming [^OpenAIClient client ^ChatModel model msg on-chunk-process-fn]
   (let [params (-> (ChatCompletionCreateParams/builder)
                    (.addUserMessage msg)
                    (.model model)
@@ -47,7 +49,7 @@
                    (.chat)
                    (.completions)
                    (.createStreaming params))]
-    (.subscribe stream (async-stream-handler on-chunk-process on-chunk-complete))
+    (.subscribe stream (async-stream-handler (on-chunk-process on-chunk-process-fn) on-chunk-complete))
     (doto (.onCompleteFuture stream)
       (.whenComplete on-stream-complete)
       (deref))))

@@ -10,3 +10,6 @@
 
 (defn openai-key [config]
   (get-in config [:secrets :openai-key]))
+
+(defn telegram-bot-key [config]
+  (get-in config [:secrets :telegram-bot-key]))
