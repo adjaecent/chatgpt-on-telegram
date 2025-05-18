@@ -1,26 +1,16 @@
 (ns openai
+  (:require [config :as c])
   (:import [com.openai.client OpenAIClient]
            [com.openai.client.okhttp OpenAIOkHttpClient]
            [com.openai.core.http StreamResponse]
            [com.openai.models ChatModel]
-           ;; [com.openai.core.http.AsyncStreamResponse Handler]
            [com.openai.models.chat.completions ChatCompletion ChatCompletionChunk ChatCompletionCreateParams]
            [java.util.concurrent CompletableFuture]
            [java.time Duration]))
 
-(def api-key "")
-(def client (-> (OpenAIOkHttpClient/builder) (.apiKey api-key) (.build)))
-
-(defn chat-completion [^OpenAIClient client ^ChatModel model msg]
-  (let [params (-> (ChatCompletionCreateParams/builder)
-                   (.addUserMessage msg)
-                   (.model model)
-                   (.build))]
-    (-> client
-        (.async)
-        (.chat)
-        (.completions)
-        (.create params))))
+(def client (-> (OpenAIOkHttpClient/builder)
+                (.apiKey (-> (c/fetch) (c/openai-key)))
+                (.build)))
 
 (defn async-stream-handler [chunk-process-fn chunk-complete-fn]
   (reify com.openai.core.http.AsyncStreamResponse$Handler
