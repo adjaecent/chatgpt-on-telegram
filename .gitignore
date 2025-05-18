@@ -1,0 +1,17 @@
+*.jar
+*.zip
+*.class
+/lib/
+/classes/
+/target/
+/checkouts/
+.lein-deps-sum
+.lein-repl-history
+.lein-plugins/
+.lein-failures
+.nrepl-port
+.cpcache/
+.idea/
+.clj-kondo/
+.lsp/
+output.calva-repl
