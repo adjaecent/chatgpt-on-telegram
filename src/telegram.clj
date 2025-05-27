@@ -43,11 +43,12 @@
     (if (nil? @self-response-chat-id)
       (do
         (exec client (typing-action op-chat-id))
-        (let [response (exec client (send-msg op-chat-id chunk))]
-          (println "first response")
-          (reset! self-response-chat-id (.getMessageId response))))
+        (->> chunk
+             (send-msg op-chat-id)
+             (exec client)
+             (.getMessageId)
+             (reset! self-response-chat-id)))
       (do
-        (println (str "chunk is " chunk))
         (exec client (typing-action op-chat-id))
         (exec client (edit-msg op-chat-id @self-response-chat-id chunk))))))
 

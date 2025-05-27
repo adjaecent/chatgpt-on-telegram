@@ -13,18 +13,19 @@
     [buf f x]
     [buf f x y]
     [buf f x y & args])
-  (rst! [buf newval]))
+  (rst! [buf newval])
+  (drn! [buf]))
 
-(deftype TBuffer [^clojure.lang.Atom iatom ^clojure.lang.Atom last-deref-multiplier-atom ^long threshold]
+(deftype TBuffer [^clojure.lang.Atom iatom ^clojure.lang.Atom last-deref-multiple-atom ^long threshold]
   clojure.lang.IDeref
   (deref [_]
     (let [current-val @iatom
           current-count (count current-val)
-          last-multiple @last-deref-multiplier-atom
+          last-multiple @last-deref-multiple-atom
           target-multiple (inc last-multiple)
           target-size (* target-multiple threshold)]
       (when (>= current-count target-size)
-        (reset! last-deref-multiplier-atom (quot current-count threshold))
+        (reset! last-deref-multiple-atom (quot current-count threshold))
         current-val)))
   IBufferOps
   (swp! [buf f] (swap! (.iatom buf) f))
@@ -33,8 +34,9 @@
   (swp! [buf f x y & args] (apply swap! (.iatom buf) f x y args))
   (rst! [buf newval]
     (reset! (.iatom buf) newval)
-    (reset! (.last-deref-multiplier-atom buf) 0)
-    newval))
+    (reset! (.last-deref-multiple-atom buf) 0)
+    newval)
+  (drn! [buf] @(.iatom buf)))
 
 (defmethod print-method TBuffer [buf ^java.io.Writer w]
   (.write w (str "#<TBuffer thres=" (.threshold buf) ",cur=" (count @(.iatom buf)) ">")))
