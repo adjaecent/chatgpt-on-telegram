@@ -1,5 +1,6 @@
 (ns openai
-  (:require [config :as c])
+  (:require [config :as c]
+            [threads :as t])
   (:import [com.openai.client OpenAIClient]
            [com.openai.client.okhttp OpenAIOkHttpClient]
            [com.openai.core.http StreamResponse]
@@ -10,7 +11,7 @@
 
 (def api-token (-> (c/fetch) (c/openai-key)))
 (def gpt-4 (ChatModel/GPT_4))
-(def client (-> (OpenAIOkHttpClient/builder) (.apiKey api-token) (.build)))
+(def client (-> (OpenAIOkHttpClient/builder) (.streamHandlerExecutor t/vthread-executor) (.apiKey api-token) (.build)))
 
 (defn async-stream-handler [chunk-process-fn chunk-complete-fn]
   (reify com.openai.core.http.AsyncStreamResponse$Handler
