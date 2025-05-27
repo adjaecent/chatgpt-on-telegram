@@ -1,6 +1,7 @@
 (ns openai
   (:require [config :as c]
-            [threads :as t])
+            [threads :as t]
+            [sundry :refer [buffer swp! rst!]])
   (:import [com.openai.client OpenAIClient]
            [com.openai.client.okhttp OpenAIOkHttpClient]
            [com.openai.core.http StreamResponse]
@@ -13,6 +14,14 @@
 (def gpt-4 (ChatModel/GPT_4))
 (def client (-> (OpenAIOkHttpClient/builder) (.streamHandlerExecutor t/vthread-executor) (.apiKey api-token) (.build)))
 
+(defn parse-choice [choice]
+  (-> choice
+      (.delta)
+      (.content)
+      (.orElse nil)))
+
+(defn choices [chunk] (.choices chunk))
+
 (defn async-stream-handler [chunk-process-fn chunk-complete-fn]
   (reify com.openai.core.http.AsyncStreamResponse$Handler
     (onNext [this value]
@@ -20,15 +29,13 @@
     (onComplete [this error]
       (chunk-complete-fn this error))))
 
-(defn on-chunk-process [process-fn]
+(defn on-chunk-process [process-fn buffer]
   (fn [^ChatCompletionChunk chunk]
     (mapcat (fn [choice]
               (print "processing choice:" choice)
-              (process-fn (-> choice
-                              (.delta)
-                              (.content)
-                              (.orElse nil))))
-            (.choices chunk))))
+              (swp! buffer str (parse-choice choice))
+              (process-fn @buffer))
+            (choices chunk))))
 
 (defn on-chunk-complete [unused error]
   (if (.isPresent error)
@@ -40,7 +47,7 @@
     (println "Stream did not finish. Something went wrong!")
     (println "No more chunks left.")))
 
-(defn chat-completion-streaming [^OpenAIClient client ^ChatModel model msg on-chunk-process-fn]
+(defn chat-completion-streaming [^ChatModel model msg on-chunk-process-fn]
   (let [params (-> (ChatCompletionCreateParams/builder)
                    (.addUserMessage msg)
                    (.model model)
@@ -50,7 +57,7 @@
                    (.chat)
                    (.completions)
                    (.createStreaming params))]
-    (.subscribe stream (async-stream-handler (on-chunk-process on-chunk-process-fn) on-chunk-complete))
+    (.subscribe stream (async-stream-handler (on-chunk-process on-chunk-process-fn (buffer)) on-chunk-complete))
     (doto (.onCompleteFuture stream)
       (.whenComplete on-stream-complete)
       (deref))))

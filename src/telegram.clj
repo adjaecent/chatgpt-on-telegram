@@ -16,32 +16,40 @@
 
 (def bot-token (-> (c/fetch) (c/telegram-bot-key)))
 
-;; TODO this is bad and will get rate-limited
-;; buffer the chunks heavily before re-executing edits on Telegram
-(defn chunked-response [client op-chat-id self-response-to-edit-chat-id chunk]
+(defn typing-action [id]
+  (-> (SendChatAction/builder)
+      (.action (.toString ActionType/TYPING))
+      (.chatId id)
+      (.build)))
+
+(defn send-msg [id msg]
+  (-> (SendMessage/builder)
+      (.chatId id)
+      (.text msg)
+      (.build)))
+
+(defn edit-msg [op-id msg-id msg]
+  (-> (EditMessageText/builder)
+      (.chatId op-id)
+      (.messageId msg-id)
+      (.text msg)
+      (.build)))
+
+(defn exec [client method]
+  (.execute client method))
+
+(defn chunked-response [client op-chat-id self-response-chat-id chunk]
   (when-not (empty? chunk)
-    (let [typing-action (-> (SendChatAction/builder)
-                            (.action (.toString ActionType/TYPING))
-                            (.chatId op-chat-id)
-                            (.build))]
-      (if (nil? (:id @self-response-to-edit-chat-id))
-        (do
-          (.execute client typing-action)
-          (let [message (-> (SendMessage/builder)
-                            (.chatId op-chat-id)
-                            (.text chunk)
-                            (.build))
-                response (.execute client message)]
-            (reset! self-response-to-edit-chat-id {:id (.getMessageId response) :msg chunk})))
-        (do
-          (.execute client typing-action)
-          (swap! self-response-to-edit-chat-id update :msg str chunk)
-          (let [message (-> (EditMessageText/builder)
-                            (.chatId op-chat-id)
-                            (.messageId (:id @self-response-to-edit-chat-id))
-                            (.text (:msg @self-response-to-edit-chat-id))
-                            (.build))]
-            (.execute client message)))))))
+    (if (nil? @self-response-chat-id)
+      (do
+        (exec client (typing-action op-chat-id))
+        (let [response (exec client (send-msg op-chat-id chunk))]
+          (println "first response")
+          (reset! self-response-chat-id (.getMessageId response))))
+      (do
+        (println (str "chunk is " chunk))
+        (exec client (typing-action op-chat-id))
+        (exec client (edit-msg op-chat-id @self-response-chat-id chunk))))))
 
 (defn create-bot [token]
   (let [client (OkHttpTelegramClient. token)]
@@ -52,13 +60,12 @@
                    _ (.hasText msg)
                    chat-id (.getChatId msg)
                    msg-contents (.getText msg)
-                   self-response-to-edit-chat-id (atom {:id nil :msg nil})]
+                   self-response-chat-id (atom nil)]
          (try
            (openai/chat-completion-streaming
-            openai/client
             openai/gpt-4
             msg-contents
-            (partial chunked-response client chat-id self-response-to-edit-chat-id))
+            (partial chunked-response client chat-id self-response-chat-id))
            (catch TelegramApiException e
              (.printStackTrace e))))
        nil)))) ;; Explicitly return nil for void method
