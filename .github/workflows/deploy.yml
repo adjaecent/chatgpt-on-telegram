@@ -1,0 +1,24 @@
+name: Build and Upload ChatGPT on Telegram Docker Image
+
+on:
+  push:
+    branches: [main]
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}/chatgpt-on-telegram
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t $IMAGE_NAME:latest .
+
+      - name: Push Docker image
+        run: docker push $IMAGE_NAME:latest
