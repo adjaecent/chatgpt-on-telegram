@@ -1,18 +1,24 @@
 (ns openai
-  (:require [config :as c]
+  (:require [mount.core :refer [defstate]]
+            [config :as c]
             [threads :as t]
             [sundry :refer [buffer swp! rst! drn!]])
   (:import [com.openai.client OpenAIClient]
            [com.openai.client.okhttp OpenAIOkHttpClient]
-           [com.openai.core.http StreamResponse]
+           [com.openai.core.http AsyncStreamResponse StreamResponse]
            [com.openai.models ChatModel]
            [com.openai.models.chat.completions ChatCompletion ChatCompletionChunk ChatCompletionCreateParams]
            [java.util.concurrent CompletableFuture]
            [java.time Duration]))
 
 (def api-token (-> (c/fetch) (c/openai-key)))
-(def gpt-4 (ChatModel/GPT_4))
-(def client (-> (OpenAIOkHttpClient/builder) (.streamHandlerExecutor t/vthread-executor) (.apiKey api-token) (.build)))
+(def gpt-4 ChatModel/GPT_4)
+(defstate client
+          :start (-> (OpenAIOkHttpClient/builder)
+                     (.streamHandlerExecutor t/vthread-executor)
+                     (.apiKey api-token)
+                     (.build))
+          :stop (.close client))
 
 (defn parse-choice [choice]
   (-> choice

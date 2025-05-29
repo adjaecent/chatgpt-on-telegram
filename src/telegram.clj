@@ -1,5 +1,6 @@
 (ns telegram
-  (:require [openai]
+  (:require [mount.core :refer [defstate]]
+            [openai]
             [config :as c]
             [sundry :refer [when-let*]])
   (:import
@@ -71,17 +72,17 @@
              (.printStackTrace e))))
        nil)))) ;; Explicitly return nil for void method
 
-(defn start-dev []
-  (let [bots-application (TelegramBotsLongPollingApplication.)]
-    (.registerBot bots-application bot-token (create-bot bot-token))
-    (println "Bot successfully started!")
-    ;; Return the application so it can be closed later
-    bots-application))
+(defn start []
+  (let [bot (TelegramBotsLongPollingApplication.)]
+    (.registerBot bot bot-token (create-bot bot-token))
+    (println "Telegram bot successfully started!")
+    bot))
 
-(comment
-  (defn start [& args]
-    (try
-      (.registerBot (TelegramBotsLongPollingApplication.) bot-token (create-bot bot-token))
-      (.join (Thread/currentThread))
-      (catch Exception e
-        (.printStackTrace e)))))
+(defn stop [client]
+  (println "Telegram bot stopping...")
+  (.close client))
+
+(defstate client
+  :start (start)
+  :stop (stop client))
+
