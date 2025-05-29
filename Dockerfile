@@ -6,12 +6,12 @@ ENV CLOJURE_VERSION=1.12.0.849 \
     DEPS_INSTALL_DIR=/opt/clojure \
     PATH="/opt/clojure:${PATH}"
 
-# Install dependencies and Clojure CLI tools
-RUN apt-get update && apt-get install -y curl bash rlwrap \
- && curl -O https://download.clojure.org/install/linux-install-${CLOJURE_VERSION}.sh \
- && chmod +x linux-install-${CLOJURE_VERSION}.sh \
- && ./linux-install-${CLOJURE_VERSION}.sh \
- && rm linux-install-${CLOJURE_VERSION}.sh \
+# Install dependencies and Clojure CLI
+RUN apt-get update && apt-get install -y curl bash rlwrap git ca-certificates \
+ && curl -O https://download.clojure.org/install/linux-install.sh \
+ && chmod +x linux-install.sh \
+ && ./linux-install.sh \
+ && rm linux-install.sh \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create and set the working directory
