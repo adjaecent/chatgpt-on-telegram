@@ -23,6 +23,7 @@ RUN clojure -P
 
 # Copy the rest of the app
 COPY . ./
+RUN cp resources/secrets.edn.sample resources/secrets.edn
 
 # Run the app (ensure you have :run alias in deps.edn)
 CMD ["clojure", "-M:run"]
