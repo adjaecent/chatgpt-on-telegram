@@ -58,15 +58,15 @@
     (deref)))
 
 (defn chat-completion-streaming [^ChatModel model msg on-chunk-process-fn]
-  (let [params (-> (ChatCompletionCreateParams/builder)
-                   (.addUserMessage msg)
-                   (.model model)
-                   (.build))
-        stream (-> client
-                   (.async)
-                   (.chat)
-                   (.completions)
-                   (.createStreaming params))
+  (let [params          (-> (ChatCompletionCreateParams/builder)
+                            (.addUserMessage msg)
+                            (.model model)
+                            (.build))
+        stream          (-> client
+                            (.async)
+                            (.chat)
+                            (.completions)
+                            (.createStreaming params))
         response-buffer (buffer)]
     (register-stream-initiate stream on-chunk-process-fn response-buffer)
     (register-stream-complete stream on-chunk-process-fn response-buffer)))

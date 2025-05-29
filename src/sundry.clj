@@ -19,11 +19,11 @@
 (deftype TBuffer [^clojure.lang.Atom iatom ^clojure.lang.Atom last-deref-multiple-atom ^long threshold]
   clojure.lang.IDeref
   (deref [_]
-    (let [current-val @iatom
-          current-count (count current-val)
-          last-multiple @last-deref-multiple-atom
+    (let [current-val     @iatom
+          current-count   (count current-val)
+          last-multiple   @last-deref-multiple-atom
           target-multiple (inc last-multiple)
-          target-size (* target-multiple threshold)]
+          target-size     (* target-multiple threshold)]
       (when (>= current-count target-size)
         (reset! last-deref-multiple-atom (quot current-count threshold))
         current-val)))

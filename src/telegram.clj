@@ -56,11 +56,11 @@
   (let [client (OkHttpTelegramClient. token)]
     (reify LongPollingSingleThreadUpdateConsumer
       (^void consume [^LongPollingSingleThreadUpdateConsumer _ ^Update msg-update]
-       (when-let* [_ (.hasMessage msg-update)
-                   msg (.getMessage msg-update)
-                   _ (.hasText msg)
-                   chat-id (.getChatId msg)
-                   msg-contents (.getText msg)
+       (when-let* [_                     (.hasMessage msg-update)
+                   msg                   (.getMessage msg-update)
+                   _                     (.hasText msg)
+                   chat-id               (.getChatId msg)
+                   msg-contents          (.getText msg)
                    self-response-chat-id (atom nil)]
          (try
            (openai/chat-completion-streaming
