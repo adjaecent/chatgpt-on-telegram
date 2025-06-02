@@ -2,7 +2,7 @@
 
 ### Before it is fully functional
 
-- [ ] Dockerize for deployments
+- [x] Dockerize for deployments
 - [ ] Reply to messages
 - [ ] Add logging
 - [ ] Telegram HTTP client should use Virtual Threads

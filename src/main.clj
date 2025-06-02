@@ -5,7 +5,7 @@
 
 (defn add-shutdown-hook []
   (.addShutdownHook (Runtime/getRuntime)
-                    (Thread. #(mount/stop))))
+                    (Thread. mount/stop)))
 
 (defn -main
   "Start the telegram client"
