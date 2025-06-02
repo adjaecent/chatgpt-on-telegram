@@ -6,7 +6,6 @@
   (:import
    [org.telegram.telegrambots.client.okhttp OkHttpTelegramClient]
    [org.telegram.telegrambots.meta.exceptions TelegramApiException]
-   [org.telegram.telegrambots.meta.generics TelegramClient]
    [org.telegram.telegrambots.meta.api.methods.send SendMessage]
    [org.telegram.telegrambots.meta.api.methods.updatingmessages EditMessageText]
    [org.telegram.telegrambots.meta.api.objects Update]
@@ -17,19 +16,19 @@
 
 (def bot-token (-> (c/fetch) (c/telegram-bot-key)))
 
-(defn typing-action [id]
+(defn typing-action [^String id]
   (-> (SendChatAction/builder)
       (.action (.toString ActionType/TYPING))
       (.chatId id)
       (.build)))
 
-(defn send-msg [id msg]
+(defn send-msg [^String id msg]
   (-> (SendMessage/builder)
       (.chatId id)
       (.text msg)
       (.build)))
 
-(defn edit-msg [op-id msg-id msg]
+(defn edit-msg [^String op-id msg-id msg]
   (-> (EditMessageText/builder)
       (.chatId op-id)
       (.messageId msg-id)
@@ -67,7 +66,7 @@
            (openai/chat-completion-streaming
             openai/gpt-4
             msg-contents
-            (partial chunked-response client chat-id self-response-chat-id))
+            (partial chunked-response client (str chat-id) self-response-chat-id))
            (catch TelegramApiException e
              (.printStackTrace e))))
        nil)))) ;; Explicitly return nil for void method

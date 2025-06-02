@@ -9,7 +9,7 @@
 
 (defn -main
   "Start the telegram client"
-  [& args]
+  [& _args]
   (add-shutdown-hook)
   (mount/start #'openai/client
                #'telegram/client)

@@ -3,13 +3,10 @@
             [config :as c]
             [threads :as t]
             [sundry :refer [buffer swp! rst! drn!]])
-  (:import [com.openai.client OpenAIClient]
-           [com.openai.client.okhttp OpenAIOkHttpClient]
-           [com.openai.core.http AsyncStreamResponse StreamResponse]
+  (:import [com.openai.client.okhttp OpenAIOkHttpClient]
+           [com.openai.core.http AsyncStreamResponse$Handler]
            [com.openai.models ChatModel]
-           [com.openai.models.chat.completions ChatCompletion ChatCompletionChunk ChatCompletionCreateParams]
-           [java.util.concurrent CompletableFuture]
-           [java.time Duration]))
+           [com.openai.models.chat.completions ChatCompletionChunk ChatCompletionCreateParams]))
 
 (def api-token (-> (c/fetch) (c/openai-key)))
 (def gpt-4 ChatModel/GPT_4)
@@ -29,7 +26,7 @@
 (defn choices [chunk] (.choices chunk))
 
 (defn async-stream-handler [chunk-process-fn chunk-complete-fn]
-  (reify com.openai.core.http.AsyncStreamResponse$Handler
+  (reify AsyncStreamResponse$Handler
     (onNext [_ value]
       (chunk-process-fn value))
     (onComplete [this error]
@@ -63,7 +60,7 @@
     (.whenComplete (on-stream-complete chunk-process-fn buffer))
     (deref)))
 
-(defn chat-completion-streaming [^ChatModel model msg on-chunk-process-fn]
+(defn chat-completion-streaming [^ChatModel model ^String msg on-chunk-process-fn]
   (let [params          (-> (ChatCompletionCreateParams/builder)
                             (.addUserMessage msg)
                             (.model model)
