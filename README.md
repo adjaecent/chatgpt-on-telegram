@@ -9,3 +9,10 @@
 - [ ] Nicer abstraction between OpenAI and Telegram (avoid coupling)
 - [ ] Allowlist users who can access the bot
 - [ ] Maintain user sessions
+- [ ] Markdown support for code stuff
+
+### Next up & nice-to-haves
+
+- [ ] Upload voice recordings and reply to those
+- [ ] Model switching
+- [ ] Support parsing attached media (images, files, videos)
