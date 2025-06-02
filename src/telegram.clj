@@ -22,9 +22,10 @@
       (.chatId id)
       (.build)))
 
-(defn send-msg [^String id msg]
+(defn send-msg [^String id msg-id msg]
   (-> (SendMessage/builder)
       (.chatId id)
+      (.replyToMessageId msg-id)
       (.text msg)
       (.build)))
 
@@ -38,13 +39,13 @@
 (defn exec [client method]
   (.execute client method))
 
-(defn chunked-response [client op-chat-id self-response-chat-id chunk]
+(defn chunked-response [client op-chat-id msg-id self-response-chat-id chunk]
   (when-not (empty? chunk)
     (if (nil? @self-response-chat-id)
       (do
         (exec client (typing-action op-chat-id))
         (->> chunk
-             (send-msg op-chat-id)
+             (send-msg op-chat-id msg-id)
              (exec client)
              (.getMessageId)
              (reset! self-response-chat-id)))
@@ -58,6 +59,7 @@
       (^void consume [^LongPollingSingleThreadUpdateConsumer _ ^Update msg-update]
        (when-let* [_                     (.hasMessage msg-update)
                    msg                   (.getMessage msg-update)
+                   msg-id                (.getMessageId msg)
                    _                     (.hasText msg)
                    chat-id               (.getChatId msg)
                    msg-contents          (.getText msg)
@@ -66,7 +68,7 @@
            (openai/chat-completion-streaming
             openai/gpt-4
             msg-contents
-            (partial chunked-response client (str chat-id) self-response-chat-id))
+            (partial chunked-response client (str chat-id) msg-id self-response-chat-id))
            (catch TelegramApiException e
              (.printStackTrace e))))
        nil)))) ;; Explicitly return nil for void method

@@ -3,7 +3,7 @@
 ### Before it is fully functional
 
 - [x] Dockerize for deployments
-- [ ] Reply to messages
+- [x] Reply to messages
 - [ ] Add logging
 - [ ] Telegram HTTP client should use Virtual Threads
 - [ ] Nicer abstraction between OpenAI and Telegram (avoid coupling)
