@@ -1,6 +1,5 @@
 (ns threads
   (:import [java.util.concurrent Executors]
-           [org.eclipse.jetty.util VirtualThreads]
            [org.eclipse.jetty.util.thread VirtualThreadPool]))
 
 (defonce vthread-executor
@@ -13,5 +12,4 @@
   VirtualThreadPool doesn't actually pool, so we enforce a max limit"
   []
   (doto (VirtualThreadPool.)
-    (.setMaxThreads 200)
     (.setName "jetty-vthread")))
