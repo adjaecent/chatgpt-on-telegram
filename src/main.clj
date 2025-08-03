@@ -12,6 +12,7 @@
   [& _args]
   (add-shutdown-hook)
   (mount/start #'openai/client
-               #'telegram/client)
+               #'telegram/http-client
+               #'telegram/consumer)
   (.join (Thread/currentThread)))
 
