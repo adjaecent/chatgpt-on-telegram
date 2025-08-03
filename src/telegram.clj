@@ -5,17 +5,17 @@
             [threads :as t]
             [sundry :refer [when-let*]])
   (:import
-   [org.telegram.telegrambots.client.jetty JettyTelegramClient]
-   [org.eclipse.jetty.client HttpClient]
-   [org.eclipse.jetty.client.transport HttpClientTransportOverHTTP]
-   [org.telegram.telegrambots.meta.exceptions TelegramApiException]
-   [org.telegram.telegrambots.meta.api.methods.send SendMessage]
-   [org.telegram.telegrambots.meta.api.methods.updatingmessages EditMessageText]
-   [org.telegram.telegrambots.meta.api.objects Update]
-   [org.telegram.telegrambots.meta.api.methods ActionType]
-   [org.telegram.telegrambots.meta.api.methods.send SendChatAction]
-   [org.telegram.telegrambots.longpolling.util LongPollingSingleThreadUpdateConsumer]
-   [org.telegram.telegrambots.longpolling TelegramBotsLongPollingApplication]))
+    [org.telegram.telegrambots.client.jetty JettyTelegramClient]
+    [org.eclipse.jetty.client HttpClient]
+    [org.eclipse.jetty.client.transport HttpClientTransportOverHTTP]
+    [org.telegram.telegrambots.meta.exceptions TelegramApiException]
+    [org.telegram.telegrambots.meta.api.methods.send SendMessage]
+    [org.telegram.telegrambots.meta.api.methods.updatingmessages EditMessageText]
+    [org.telegram.telegrambots.meta.api.objects Update]
+    [org.telegram.telegrambots.meta.api.methods ActionType]
+    [org.telegram.telegrambots.meta.api.methods.send SendChatAction]
+    [org.telegram.telegrambots.longpolling.util LongPollingSingleThreadUpdateConsumer]
+    [org.telegram.telegrambots.longpolling TelegramBotsLongPollingApplication]))
 
 (defonce max-requests 100)
 (defonce max-connections 5)
@@ -34,10 +34,6 @@
         (.start))
       (JettyTelegramClient. bot-token)))
 
-(defn stop-http-client [client]
-  (println "Stopping Telegram HTTP client...")
-  (.close client))
-
 (defn start-consumer []
   (let [bot (TelegramBotsLongPollingApplication.)]
     (println "Starting Telegram consumer...")
@@ -48,7 +44,7 @@
   (println "Stopping Telegram consumer...")
   (.close client))
 
-(defstate http-client :start (start-http-client) :stop (stop-http-client http-client))
+(defstate http-client :start (start-http-client))
 (defstate consumer :start (start-consumer) :stop (stop-consumer consumer))
 
 (defn typing-action [^String id]
@@ -91,18 +87,18 @@
 (defn create-bot [token]
   (reify LongPollingSingleThreadUpdateConsumer
     (^void consume [^LongPollingSingleThreadUpdateConsumer _ ^Update msg-update]
-     (when-let* [_                     (.hasMessage msg-update)
-                 msg                   (.getMessage msg-update)
-                 msg-id                (.getMessageId msg)
-                 _                     (.hasText msg)
-                 chat-id               (.getChatId msg)
-                 msg-contents          (.getText msg)
-                 self-response-chat-id (atom nil)]
-       (try
-         (openai/chat-completion-streaming
-          openai/gpt-4
-          msg-contents
-          (partial chunked-response http-client (str chat-id) msg-id self-response-chat-id))
-         (catch TelegramApiException e
-           (.printStackTrace e))))
-     nil))) ;; Explicitly return nil for void method
+      (when-let* [_ (.hasMessage msg-update)
+                  msg (.getMessage msg-update)
+                  msg-id (.getMessageId msg)
+                  _ (.hasText msg)
+                  chat-id (.getChatId msg)
+                  msg-contents (.getText msg)
+                  self-response-chat-id (atom nil)]
+                 (try
+                   (openai/chat-completion-streaming
+                     openai/gpt-4
+                     msg-contents
+                     (partial chunked-response http-client (str chat-id) msg-id self-response-chat-id))
+                   (catch TelegramApiException e
+                     (.printStackTrace e))))
+      nil)))                                                ;; Explicitly return nil for void method
