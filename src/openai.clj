@@ -10,10 +10,12 @@
 
 (def api-token (-> (c/fetch) (c/openai-key)))
 (def gpt-4 ChatModel/GPT_4)
+(def open-router-base-url "https://openrouter.ai/api/v1")
 (defstate client
           :start (-> (OpenAIOkHttpClient/builder)
                      (.streamHandlerExecutor t/vthread-executor)
                      (.apiKey api-token)
+                     (.baseUrl open-router-base-url)
                      (.build))
           :stop (.close client))
 
