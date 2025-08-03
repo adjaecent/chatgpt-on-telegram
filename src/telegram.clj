@@ -8,6 +8,7 @@
     [org.telegram.telegrambots.client.jetty JettyTelegramClient]
     [org.eclipse.jetty.client HttpClient]
     [org.eclipse.jetty.client.transport HttpClientTransportOverHTTP]
+    [org.telegram.telegrambots.meta.api.objects.message Message]
     [org.telegram.telegrambots.meta.exceptions TelegramApiException]
     [org.telegram.telegrambots.meta.api.methods.send SendMessage]
     [org.telegram.telegrambots.meta.api.methods.updatingmessages EditMessageText]
@@ -37,7 +38,7 @@
 (defn start-consumer []
   (let [bot (TelegramBotsLongPollingApplication.)]
     (println "Starting Telegram consumer...")
-    (.registerBot bot bot-token (create-bot bot-token))
+    (.registerBot bot bot-token (create-bot))
     bot))
 
 (defn stop-consumer [client]
@@ -50,12 +51,12 @@
 (defn typing-action [^String id]
   (-> (SendChatAction/builder)
       (.action (.toString ActionType/TYPING))
-      (.chatId id)
+      (.chatId (str id))
       (.build)))
 
 (defn send-msg [enable-markdown ^String id msg-id msg]
   (doto (-> (SendMessage/builder)
-            (.chatId id)
+            (.chatId (str id))
             (.replyToMessageId msg-id)
             (.text msg)
             (.build))
@@ -63,47 +64,38 @@
 
 (defn edit-msg [enable-markdown ^String op-id msg-id msg]
   (doto (-> (EditMessageText/builder)
-            (.chatId op-id)
+            (.chatId (str op-id))
             (.messageId msg-id)
             (.text msg)
             (.build))
     (.enableMarkdown enable-markdown)))
 
-(defn exec [client method]
-  (.execute client method))
+(defn ^Message exec [method]
+  (.execute http-client method))
 
-(defn chunked-response
-  ([client op-chat-id msg-id self-response-chat-id chunk]
-   (chunked-response client op-chat-id msg-id self-response-chat-id chunk false))
-  ([client op-chat-id msg-id self-response-chat-id chunk eof?]
-   (when-not (empty? chunk)
-     (if (nil? @self-response-chat-id)
-       (do
-         (exec client (typing-action op-chat-id))
-         (->> chunk
-              (send-msg (boolean eof?) op-chat-id msg-id)
-              (exec client)
-              (.getMessageId)
-              (reset! self-response-chat-id)))
-       (do
-         (exec client (typing-action op-chat-id))
-         (exec client (edit-msg (boolean eof?) op-chat-id @self-response-chat-id chunk)))))))
+(defn send-first-response [chat-id user-msg-id chunk eof?]
+  (exec (typing-action chat-id))
+  (->> chunk
+       (send-msg eof? chat-id user-msg-id)
+       exec
+       (.getMessageId)))
 
-(defn create-bot [token]
+(defn send-updated-response [current-response-msg-id chat-id chunk eof?]
+  (exec (typing-action chat-id))
+  (exec (edit-msg eof? chat-id current-response-msg-id chunk)))
+
+(defn create-bot []
   (reify LongPollingSingleThreadUpdateConsumer
     (^void consume [^LongPollingSingleThreadUpdateConsumer _ ^Update msg-update]
       (when-let* [_ (.hasMessage msg-update)
                   msg (.getMessage msg-update)
-                  msg-id (.getMessageId msg)
+                  user-msg-id (.getMessageId msg)
                   _ (.hasText msg)
-                  chat-id (.getChatId msg)
+                  op-chat-id (.getChatId msg)
                   msg-contents (.getText msg)
-                  self-response-chat-id (atom nil)]
+                  process-fn (requiring-resolve 'processor/process-user-input)]
                  (try
-                   (openai/chat-completion-streaming
-                     openai/gpt-4
-                     msg-contents
-                     (partial chunked-response http-client (str chat-id) msg-id self-response-chat-id))
+                   (process-fn op-chat-id user-msg-id msg-contents)
                    (catch TelegramApiException e
                      (.printStackTrace e))))
       nil)))                                                ;; Explicitly return nil for void method

@@ -2,22 +2,26 @@
   (:require [mount.core :refer [defstate]]
             [config :as c]
             [threads :as t]
-            [sundry :refer [buffer swp! rst! drn!]])
+            [sundry :refer [buffer swp! drn!]])
   (:import [com.openai.client.okhttp OpenAIOkHttpClient]
+           (com.openai.core JsonValue)
            [com.openai.core.http AsyncStreamResponse$Handler]
            [com.openai.models ChatModel]
            [com.openai.models.chat.completions ChatCompletionChunk ChatCompletionCreateParams]))
 
-(def api-token (-> (c/fetch) (c/openai-key)))
-(def gpt-4 ChatModel/GPT_4)
 (def open-router-base-url "https://openrouter.ai/api/v1")
+(def api-token (-> (c/fetch) (c/openai-key)))
+(def model-stacks {:general ["openai/gpt-4.1:online" "openai/gpt-4.1"],
+                   :code    ["anthropic/claude-3.7-sonnet:online" "anthropic/claude-3.7-sonnet"],
+                   :reason  ["google/gemini-2.5-pro:online" "google/gemini-2.5-pro"]})
+
 (defstate client
-          :start (-> (OpenAIOkHttpClient/builder)
-                     (.streamHandlerExecutor t/vthread-executor)
-                     (.apiKey api-token)
-                     (.baseUrl open-router-base-url)
-                     (.build))
-          :stop (.close client))
+  :start (-> (OpenAIOkHttpClient/builder)
+             (.streamHandlerExecutor t/vthread-executor)
+             (.apiKey api-token)
+             (.baseUrl open-router-base-url)
+             (.build))
+  :stop (.close client))
 
 (defn parse-choice [choice]
   (-> choice
@@ -37,7 +41,6 @@
 (defn on-chunk-process [process-fn buffer]
   (fn [^ChatCompletionChunk chunk]
     (mapcat (fn [choice]
-              (print "processing choice:" choice)
               (swp! buffer str (parse-choice choice))
               (process-fn @buffer))
             (choices chunk))))
@@ -62,10 +65,12 @@
     (.whenComplete (on-stream-complete chunk-process-fn buffer))
     (deref)))
 
-(defn chat-completion-streaming [^ChatModel model ^String msg on-chunk-process-fn]
-  (let [params          (-> (ChatCompletionCreateParams/builder)
+(defn chat-completion-streaming [model-stack ^String msg on-chunk-process-fn]
+  (let [model-stack     (or model-stack :code)
+        params          (-> (ChatCompletionCreateParams/builder)
                             (.addUserMessage msg)
-                            (.model model)
+                            (.model (ChatModel/of (first (get model-stacks model-stack))))
+                            (.putAdditionalBodyProperty "models", (JsonValue/from (get model-stacks model-stack)))
                             (.build))
         stream          (-> client
                             (.async)
