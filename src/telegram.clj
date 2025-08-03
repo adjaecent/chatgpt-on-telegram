@@ -53,36 +53,41 @@
       (.chatId id)
       (.build)))
 
-(defn send-msg [^String id msg-id msg]
-  (-> (SendMessage/builder)
-      (.chatId id)
-      (.replyToMessageId msg-id)
-      (.text msg)
-      (.build)))
+(defn send-msg [enable-markdown ^String id msg-id msg]
+  (doto (-> (SendMessage/builder)
+            (.chatId id)
+            (.replyToMessageId msg-id)
+            (.text msg)
+            (.build))
+    (.enableMarkdown enable-markdown)))
 
-(defn edit-msg [^String op-id msg-id msg]
-  (-> (EditMessageText/builder)
-      (.chatId op-id)
-      (.messageId msg-id)
-      (.text msg)
-      (.build)))
+(defn edit-msg [enable-markdown ^String op-id msg-id msg]
+  (doto (-> (EditMessageText/builder)
+            (.chatId op-id)
+            (.messageId msg-id)
+            (.text msg)
+            (.build))
+    (.enableMarkdown enable-markdown)))
 
 (defn exec [client method]
   (.execute client method))
 
-(defn chunked-response [client op-chat-id msg-id self-response-chat-id chunk]
-  (when-not (empty? chunk)
-    (if (nil? @self-response-chat-id)
-      (do
-        (exec client (typing-action op-chat-id))
-        (->> chunk
-             (send-msg op-chat-id msg-id)
-             (exec client)
-             (.getMessageId)
-             (reset! self-response-chat-id)))
-      (do
-        (exec client (typing-action op-chat-id))
-        (exec client (edit-msg op-chat-id @self-response-chat-id chunk))))))
+(defn chunked-response
+  ([client op-chat-id msg-id self-response-chat-id chunk]
+   (chunked-response client op-chat-id msg-id self-response-chat-id chunk false))
+  ([client op-chat-id msg-id self-response-chat-id chunk eof?]
+   (when-not (empty? chunk)
+     (if (nil? @self-response-chat-id)
+       (do
+         (exec client (typing-action op-chat-id))
+         (->> chunk
+              (send-msg (boolean eof?) op-chat-id msg-id)
+              (exec client)
+              (.getMessageId)
+              (reset! self-response-chat-id)))
+       (do
+         (exec client (typing-action op-chat-id))
+         (exec client (edit-msg (boolean eof?) op-chat-id @self-response-chat-id chunk)))))))
 
 (defn create-bot [token]
   (reify LongPollingSingleThreadUpdateConsumer

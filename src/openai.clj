@@ -52,7 +52,7 @@
     (if error
       (println "Stream did not finish. Something went wrong!")
       (println "No more chunks left."))
-    (process-fn (drn! buffer))))
+    (process-fn (drn! buffer) :eof)))
 
 (defn register-stream-initiate [stream chunk-process-fn buffer]
   (.subscribe stream (async-stream-handler (on-chunk-process chunk-process-fn buffer) on-chunk-complete)))
