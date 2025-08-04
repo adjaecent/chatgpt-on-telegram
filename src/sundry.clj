@@ -7,6 +7,9 @@
         (when-let* ~(drop 2 bindings) ~@body))
      `(do ~@body))))
 
+(defn between? [x a b]
+  (and (>= x a) (<= x b)))
+
 (defprotocol IBufferOps
   (swp!
     [buf f]
@@ -19,14 +22,25 @@
 (deftype TBuffer [^clojure.lang.Atom iatom ^clojure.lang.Atom last-deref-multiple-atom ^long threshold]
   clojure.lang.IDeref
   (deref [_]
-    (let [current-val     @iatom
-          current-count   (count current-val)
-          last-multiple   @last-deref-multiple-atom
-          target-multiple (inc last-multiple)
-          target-size     (* target-multiple threshold)]
-      (when (>= current-count target-size)
-        (reset! last-deref-multiple-atom (quot current-count threshold))
-        current-val)))
+    (let [current-val   @iatom
+          current-count (count current-val)
+          last-multiple @last-deref-multiple-atom
+          three-percent (* threshold 0.03)
+          eight-percent (* threshold 0.08)
+          target-size   (* (inc last-multiple) threshold)]
+      (cond
+        ;; when it's the first deref attempt, and the buffer is between 5-10% of threshold
+        ;; deref immediately
+        (and (== last-multiple -1)
+             (between? current-count three-percent eight-percent))
+        (do (reset! last-deref-multiple-atom 0)
+            current-val)
+
+        ;; otherwise, deref when we've buffered the next multiple of threshold
+        (and (> last-multiple -1)
+             (>= current-count target-size))
+        (do (reset! last-deref-multiple-atom (quot current-count threshold))
+            current-val))))
   IBufferOps
   (swp! [buf f] (swap! (.iatom buf) f))
   (swp! [buf f x] (swap! (.iatom buf) f x))
@@ -34,7 +48,7 @@
   (swp! [buf f x y & args] (apply swap! (.iatom buf) f x y args))
   (rst! [buf newval]
     (reset! (.iatom buf) newval)
-    (reset! (.last-deref-multiple-atom buf) 0)
+    (reset! (.last-deref-multiple-atom buf) -1)
     newval)
   (drn! [buf] @(.iatom buf)))
 
@@ -49,4 +63,4 @@
   is updated based on the current content length divided by the threshold.
   Defaults to a threshold of 200."
   ([] (buffer 200))
-  ([threshold] (TBuffer. (atom "") (atom 0) threshold)))
+  ([threshold] (TBuffer. (atom "") (atom -1) threshold)))

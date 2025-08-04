@@ -36,13 +36,14 @@
 (defn- create-bot [input-processor-fn]
   (reify LongPollingSingleThreadUpdateConsumer
     (^void consume [^LongPollingSingleThreadUpdateConsumer _ ^Update msg-update]
-     (when-let* [_ (.hasMessage msg-update)
-                 msg (.getMessage msg-update)
-                 user-msg-id (.getMessageId msg)
-                 _ (.hasText msg)
-                 op-chat-id (.getChatId msg)
+     (when-let* [_            (.hasMessage msg-update)
+                 msg          (.getMessage msg-update)
+                 _            (.hasText msg)
+                 op-chat-id   (.getChatId msg)
+                 user-msg-id  (.getMessageId msg)
                  msg-contents (.getText msg)]
        (try
+         (exec (typing-action op-chat-id))
          (input-processor-fn op-chat-id user-msg-id msg-contents)
          (catch TelegramApiException e
            (.printStackTrace e))))
@@ -61,13 +62,13 @@
 (defstate http-client :start (start-http-client))
 (defstate consumer :start (start-consumer (mount/args)) :stop (stop-consumer consumer))
 
-(defn typing-action [^String id]
+(defn- typing-action [^String id]
   (-> (SendChatAction/builder)
       (.action (.toString ActionType/TYPING))
       (.chatId (str id))
       (.build)))
 
-(defn send-msg [enable-markdown ^String id msg-id msg]
+(defn- send-msg [enable-markdown ^String id msg-id msg]
   (doto (-> (SendMessage/builder)
             (.chatId (str id))
             (.replyToMessageId msg-id)
@@ -75,7 +76,7 @@
             (.build))
     (.enableMarkdown enable-markdown)))
 
-(defn edit-msg [enable-markdown ^String op-id msg-id msg]
+(defn- edit-msg [enable-markdown ^String op-id msg-id msg]
   (doto (-> (EditMessageText/builder)
             (.chatId (str op-id))
             (.messageId msg-id)
@@ -83,7 +84,7 @@
             (.build))
     (.enableMarkdown enable-markdown)))
 
-(defn ^Message exec [method]
+(defn- ^Message exec [method]
   (.execute http-client method))
 
 (defn send-first-response [chat-id user-msg-id chunk eof?]
