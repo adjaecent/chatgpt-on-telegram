@@ -1,13 +1,13 @@
 (ns openai
-  (:require [mount.core :refer [defstate]]
-            [config :as c]
-            [threads :as t]
-            [sundry :refer [buffer swp! drn!]])
-  (:import [com.openai.client.okhttp OpenAIOkHttpClient]
-           (com.openai.core JsonValue)
-           [com.openai.core.http AsyncStreamResponse$Handler]
-           [com.openai.models ChatModel]
-           [com.openai.models.chat.completions ChatCompletionChunk ChatCompletionCreateParams]))
+  (:require [config :as c]
+            [mount.core :refer [defstate]]
+            [sundry :refer [buffer drn! swp!]]
+            [threads :as t])
+  (:import com.openai.client.okhttp.OpenAIOkHttpClient
+           com.openai.core.http.AsyncStreamResponse$Handler
+           com.openai.core.JsonValue
+           [com.openai.models.chat.completions ChatCompletionChunk ChatCompletionCreateParams]
+           com.openai.models.ChatModel))
 
 (def open-router-base-url "https://openrouter.ai/api/v1")
 (def api-token (-> (c/fetch) (c/openai-key)))
@@ -67,11 +67,11 @@
     (deref)))
 
 (defn chat-completion-streaming [model-stack ^String msg on-chunk-process-fn]
-  (let [model-stack     (or model-stack :code)
+  (let [model-stack     (get model-stacks (or model-stack :fast))
         params          (-> (ChatCompletionCreateParams/builder)
                             (.addUserMessage msg)
-                            (.model (ChatModel/of (first (get model-stacks model-stack))))
-                            (.putAdditionalBodyProperty "models", (JsonValue/from (get model-stacks model-stack)))
+                            (.model (ChatModel/of (first model-stack)))
+                            (.putAdditionalBodyProperty "models", (JsonValue/from model-stack))
                             (.build))
         stream          (-> client
                             (.async)

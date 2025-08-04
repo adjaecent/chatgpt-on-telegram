@@ -9,7 +9,8 @@
   {:chat-id                     nil
    :current-user-message-id     nil
    :current-response-message-id nil
-   :messages                    []})
+   :messages                    []
+   :current-model-stack         :fast})
 
 (defn fetch [id]
   (get @sessions id))

@@ -1,8 +1,8 @@
 (ns main
   (:require [mount.core :as mount]
-            [openai]
-            [processor]
-            [telegram]))
+            openai
+            processor
+            telegram))
 
 (defn add-shutdown-hook []
   (.addShutdownHook (Runtime/getRuntime)

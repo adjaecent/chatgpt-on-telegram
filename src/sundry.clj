@@ -29,7 +29,7 @@
           eight-percent (* threshold 0.08)
           target-size   (* (inc last-multiple) threshold)]
       (cond
-        ;; when it's the first deref attempt, and the buffer is between 5-10% of threshold
+        ;; when it's the first deref attempt, and the buffer is between 3-8% of threshold
         ;; deref immediately
         (and (== last-multiple -1)
              (between? current-count three-percent eight-percent))

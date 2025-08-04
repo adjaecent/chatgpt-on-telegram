@@ -1,6 +1,6 @@
 (ns threads
-  (:import [java.util.concurrent Executors]
-           [org.eclipse.jetty.util.thread VirtualThreadPool]))
+  (:import java.util.concurrent.Executors
+           org.eclipse.jetty.util.thread.VirtualThreadPool))
 
 (defonce vthread-executor
   ^{:doc "These are run on platform threads (common, carrier fork-join pool"}
