@@ -71,6 +71,7 @@
         params          (-> (ChatCompletionCreateParams/builder)
                             (.addUserMessage msg)
                             (.model (ChatModel/of (first model-stack)))
+                            (.putAdditionalBodyProperty "stream", (JsonValue/from true))
                             (.putAdditionalBodyProperty "models", (JsonValue/from model-stack))
                             (.build))
         stream          (-> client
