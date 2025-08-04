@@ -24,6 +24,6 @@
                     (assoc :current-response-message-id nil)
                     (update :messages conj {:role :user :content prompt-content}))]
     (session/write chat-id session)
-    (openai/chat-completion-streaming :general
+    (openai/chat-completion-streaming :fast
                                       prompt-content
                                       (partial process-response chat-id))))

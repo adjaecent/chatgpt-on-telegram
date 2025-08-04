@@ -11,7 +11,8 @@
 
 (def open-router-base-url "https://openrouter.ai/api/v1")
 (def api-token (-> (c/fetch) (c/openai-key)))
-(def model-stacks {:general ["openai/gpt-4.1:online" "openai/gpt-4.1"],
+(def model-stacks {:fast    ["google/gemini-2.5-flash-lite", "meta-llama/llama-guard-2-8b"],
+                   :general ["openai/gpt-4.1:online" "openai/gpt-4.1"],
                    :code    ["anthropic/claude-3.7-sonnet:online" "anthropic/claude-3.7-sonnet"],
                    :reason  ["google/gemini-2.5-pro:online" "google/gemini-2.5-pro"]})
 
