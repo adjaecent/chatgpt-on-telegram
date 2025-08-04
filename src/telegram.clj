@@ -1,6 +1,5 @@
 (ns telegram
-  (:require [mount.core :refer [defstate]]
-            [openai]
+  (:require [mount.core :as mount :refer [defstate]]
             [config :as c]
             [threads :as t]
             [sundry :refer [when-let*]])
@@ -22,9 +21,8 @@
 (defonce max-connections 5)
 (defonce connect-timeout 5000)
 (def bot-token (-> (c/fetch) (c/telegram-bot-key)))
-(declare create-bot)
 
-(defn start-http-client []
+(defn- start-http-client []
   (println "Starting Telegram HTTP client...")
   (-> (HttpClient. (HttpClientTransportOverHTTP. 1))
       (doto
@@ -35,18 +33,33 @@
         (.start))
       (JettyTelegramClient. bot-token)))
 
-(defn start-consumer []
+(defn- create-bot [input-processor-fn]
+  (reify LongPollingSingleThreadUpdateConsumer
+    (^void consume [^LongPollingSingleThreadUpdateConsumer _ ^Update msg-update]
+     (when-let* [_ (.hasMessage msg-update)
+                 msg (.getMessage msg-update)
+                 user-msg-id (.getMessageId msg)
+                 _ (.hasText msg)
+                 op-chat-id (.getChatId msg)
+                 msg-contents (.getText msg)]
+       (try
+         (input-processor-fn op-chat-id user-msg-id msg-contents)
+         (catch TelegramApiException e
+           (.printStackTrace e))))
+     nil)))
+
+(defn- start-consumer [{:keys [input-processor-fn]}]
   (let [bot (TelegramBotsLongPollingApplication.)]
     (println "Starting Telegram consumer...")
-    (.registerBot bot bot-token (create-bot))
+    (.registerBot bot bot-token (create-bot input-processor-fn))
     bot))
 
-(defn stop-consumer [client]
+(defn- stop-consumer [client]
   (println "Stopping Telegram consumer...")
   (.close client))
 
 (defstate http-client :start (start-http-client))
-(defstate consumer :start (start-consumer) :stop (stop-consumer consumer))
+(defstate consumer :start (start-consumer (mount/args)) :stop (stop-consumer consumer))
 
 (defn typing-action [^String id]
   (-> (SendChatAction/builder)
@@ -77,25 +90,9 @@
   (exec (typing-action chat-id))
   (->> chunk
        (send-msg eof? chat-id user-msg-id)
-       exec
+       (exec)
        (.getMessageId)))
 
 (defn send-updated-response [current-response-msg-id chat-id chunk eof?]
   (exec (typing-action chat-id))
   (exec (edit-msg eof? chat-id current-response-msg-id chunk)))
-
-(defn create-bot []
-  (reify LongPollingSingleThreadUpdateConsumer
-    (^void consume [^LongPollingSingleThreadUpdateConsumer _ ^Update msg-update]
-      (when-let* [_ (.hasMessage msg-update)
-                  msg (.getMessage msg-update)
-                  user-msg-id (.getMessageId msg)
-                  _ (.hasText msg)
-                  op-chat-id (.getChatId msg)
-                  msg-contents (.getText msg)
-                  process-fn (requiring-resolve 'processor/process-user-input)]
-                 (try
-                   (process-fn op-chat-id user-msg-id msg-contents)
-                   (catch TelegramApiException e
-                     (.printStackTrace e))))
-      nil)))                                                ;; Explicitly return nil for void method

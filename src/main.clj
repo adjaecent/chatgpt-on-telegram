@@ -1,18 +1,24 @@
 (ns main
   (:require [mount.core :as mount]
             [openai]
+            [processor]
             [telegram]))
 
 (defn add-shutdown-hook []
   (.addShutdownHook (Runtime/getRuntime)
-                    (Thread. mount/stop)))
+                    (Thread. #(mount/stop))))
+
+(defn start-deps []
+  (mount/start #'openai/client
+               #'telegram/http-client)
+
+  (mount/start-with-args
+   {:input-processor-fn processor/process-user-input}
+    #'telegram/consumer))
 
 (defn -main
   "Start the telegram client"
   [& _args]
   (add-shutdown-hook)
-  (mount/start #'openai/client
-               #'telegram/http-client
-               #'telegram/consumer)
+  (start-deps)
   (.join (Thread/currentThread)))
-
