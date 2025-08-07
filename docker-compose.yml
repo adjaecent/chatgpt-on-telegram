@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  datomic:
+    image: filipesilva/datomic-pro-sqlite:latest
+    ports:
+      - "4334:4334"
+    volumes:
+      - ./storage:/usr/storage
+    environment:
+      - DATOMIC_DB=app
+
+  app:
+    build: .
+    depends_on:
+      - datomic
+    environment:
+      - DATOMIC_URI=datomic:sql://app?jdbc:sqlite:/usr/storage/sqlite.db
+      - APP_ENV=prod
+      - OPENAI_KEY=${OPENAI_KEY}
+      - TELEGRAM_BOT_KEY=${TELEGRAM_BOT_KEY}
+    volumes:
+      - ./storage:/usr/storage

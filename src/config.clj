@@ -13,3 +13,9 @@
 
 (defn telegram-bot-key [config]
   (get-in config [:secrets :telegram-bot-key]))
+
+(defn datomic-uri [config]
+  (get-in config [:secrets :datomic-uri]))
+
+(defn session-ttl-minutes [config]
+  (:session-ttl-minutes config))
