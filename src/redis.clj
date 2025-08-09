@@ -1,15 +1,17 @@
 (ns redis
   (:require [mount.core :refer [defstate]]
             [taoensso.carmine :as car]
+            [taoensso.carmine.connections :as car-conn]
             [config]))
 
-(defmacro wcar* [& body]
-  `(car/wcar {:pool {} :spec {:uri (config/redis-uri (config/fetch))}}
-     ~@body))
-
 (defstate conn
-  :start {:pool {} :spec {:uri (config/redis-uri (config/fetch))}}
-  :stop nil) ; Carmine manages the pool lifecycle, no explicit stop needed for basic usage
+  :start (let [spec (car-conn/make-conn-spec
+                     :uri (config/redis-uri (config/fetch)))]
+           (car-conn/make-conn-pool spec))
+  :stop (car/conn-pool-shutdown conn))
+
+(defmacro wcar* [& body]
+  `(car/wcar conn ~@body))
 
 (defmacro with-transaction [& body]
   `(wcar*
