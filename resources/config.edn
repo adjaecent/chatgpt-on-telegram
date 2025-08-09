@@ -1,2 +1,2 @@
 {:secrets #include #join ["secrets.edn"]
- :webserver {:port #profile {:default 8000 :dev 8001}}}
+ :redis-url #or [#env REDIS_URI "redis://redis:6379"]}
