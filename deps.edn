@@ -5,9 +5,8 @@
            org.telegram/telegrambots-longpolling          {:mvn/version "8.3.0"}
            org.telegram/telegrambots-client-jetty-adapter {:mvn/version "8.3.0"}
            mount/mount                                    {:mvn/version "0.1.23"}
-           com.datomic/pro                                {:mvn/version "1.0.7364"}
-           org.xerial/sqlite-jdbc                         {:mvn/version "3.47.0.0"}
-           org.clojure/tools.logging                      {:mvn/version "1.3.0"}}
+           com.taoensso/carmine                           {:mvn/version "3.3.1"}
+           cheshire/cheshire                              {:mvn/version "5.13.0"}}
  :paths   [:clj-paths :resource-paths]
  :aliases {:build {:deps {io.github.clojure/tools.build {:git/tag "v0.10.1" :git/sha "a2d1404"}}
                    :ns-default build}

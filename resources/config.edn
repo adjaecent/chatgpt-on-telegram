@@ -1,3 +1,2 @@
 {:secrets #include #join ["secrets.edn"]
- :webserver {:port #profile {:default 8000 :dev 8001}}
- :session-ttl-minutes 60}
+ :webserver {:port #profile {:default 8000 :dev 8001}}}

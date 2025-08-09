@@ -1,22 +1,16 @@
 version: '3.8'
 services:
-  datomic:
-    image: filipesilva/datomic-pro-sqlite:latest
+  redis:
+    image: "redis:alpine"
     ports:
-      - "4334:4334"
-    volumes:
-      - ./storage:/usr/storage
-    environment:
-      - DATOMIC_DB=app
+      - "6379:6379"
 
   app:
     build: .
     depends_on:
-      - datomic
+      - redis
     environment:
-      - DATOMIC_URI=datomic:sql://app?jdbc:sqlite:/usr/storage/sqlite.db
+      - REDIS_URI=redis://redis:6379
       - APP_ENV=prod
       - OPENAI_KEY=${OPENAI_KEY}
       - TELEGRAM_BOT_KEY=${TELEGRAM_BOT_KEY}
-    volumes:
-      - ./storage:/usr/storage
