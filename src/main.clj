@@ -1,5 +1,6 @@
 (ns main
   (:require [mount.core :as mount]
+            [redis]
             openai
             processor
             telegram))
@@ -10,7 +11,8 @@
 
 (defn start-deps []
   (mount/start #'openai/client
-               #'telegram/http-client)
+               #'telegram/http-client
+               #'redis/conn)
 
   (mount/start-with-args
    {:input-processor-fn processor/process-user-input}
