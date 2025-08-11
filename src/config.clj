@@ -13,3 +13,6 @@
 
 (defn telegram-bot-key [config]
   (get-in config [:secrets :telegram-bot-key]))
+
+(defn redis-uri [config]
+  (get-in config [:secrets :redis-uri]))
