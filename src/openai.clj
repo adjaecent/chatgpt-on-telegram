@@ -39,6 +39,7 @@
     (onComplete [this error]
       (chunk-complete-fn this error))))
 
+;; TODO: only pick the first choice, instead of joining both
 (defn on-chunk-process [process-fn buffer]
   (fn [^ChatCompletionChunk chunk]
     (mapcat (fn [choice]

@@ -1,5 +1,15 @@
 (ns sundry)
 
+(defn safe-parse-long [n]
+  (try
+    (parse-long n)
+    (catch Exception _ nil)))
+
+(defn safe-parse-int [n]
+  (try
+    (Integer/parseInt n)
+    (catch Exception _ nil)))
+
 (defmacro when-let*
   ([bindings & body]
    (if (seq bindings)

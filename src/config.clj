@@ -8,11 +8,6 @@
    (aero/read-config (io/resource "config.edn")
                      {:profile (keyword profile)})))
 
-(defn openai-key [config]
-  (get-in config [:secrets :openai-key]))
-
-(defn telegram-bot-key [config]
-  (get-in config [:secrets :telegram-bot-key]))
-
-(defn redis-uri [config]
-  (get-in config [:secrets :redis-uri]))
+(defn redis-uri [config] (:redis-uri config))
+(defn openai-key [config] (get-in config [:secrets :openai-key]))
+(defn telegram-bot-key [config] (get-in config [:secrets :telegram-bot-key]))

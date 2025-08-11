@@ -5,12 +5,13 @@
             telegram))
 
 (defn process-model-stack-change [chat-id user-msg-id model-stack]
-  (let [session (-> (or (session/fetch chat-id)
-                        (session/new))
+  (let [session (-> (session/fetch chat-id)
                     (assoc :chat-id chat-id)
                     (assoc :current-model-stack model-stack))]
     (session/write chat-id session)
-    (telegram/send-first-response chat-id user-msg-id (str "You are now running the _" model-stack "_ model stack") true)))
+    (telegram/send-first-response chat-id user-msg-id
+                                  (str "You are now running the _" (name model-stack) "_ model stack")
+                                  true)))
 
 (defmulti process-command (fn [_chat-id _user-msg-id command-str] (some-> command-str (s/split #"/") (last) (keyword))))
 
@@ -23,7 +24,7 @@
 (defmethod process-command :general [chat-id user-msg-id _] (process-model-stack-change chat-id user-msg-id :general))
 
 (defmethod process-command :reset [chat-id user-msg-id _]
-  (session/write chat-id (session/new))
+  (session/write-new chat-id)
   (telegram/send-first-response chat-id user-msg-id "_Your session has been reset_ ⏱" true))
 
 (defmethod process-command :default [chat-id user-msg-id _]
@@ -42,14 +43,14 @@
               (assoc session :current-response-message-id)
               (session/write chat-id)))))))
 
+;; TODO: add a pre-prompt to sanitize the message to be relevant for telegram content size always
 (defn process-user-input [chat-id user-msg-id prompt-content]
   (if (s/starts-with? prompt-content "/")
     ;; --- IF a command, call the multimethod ---
     (process-command chat-id user-msg-id prompt-content)
 
     ;; --- ELSE, process it as a prompt ---
-    (let [session (-> (or (session/fetch chat-id)
-                          (session/new))
+    (let [session (-> (session/fetch chat-id)
                       (assoc :chat-id chat-id)
                       (assoc :current-user-message-id user-msg-id)
                       (assoc :current-response-message-id nil)

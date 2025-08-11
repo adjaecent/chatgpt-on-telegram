@@ -1,43 +1,37 @@
+;; TODO: Use a combination of LPUSH and LTRIM for the messages list and only keep a certain number of messages in the session
+;; Store the session messages in separate list, like sesssion:123:messages
+;; No need to expire the sesssion really, just pop messages after a certain number / tokens hits
 (ns session
   (:require [redis :as r]
-            [taoensso.carmine :as car]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
+            [sundry :refer [safe-parse-long safe-parse-int]]))
 
-(def session-ttl-seconds (* 60 60)) ; 1 hour
-
-(defn- session-key [id]
-  (str "session:" id))
+(defn- skey [id] (str "session:" id))
+(def ttl-seconds (* 60 60 2))
+(def schema
+  {:chat-id                     [nil safe-parse-long]
+   :current-user-message-id     [nil safe-parse-int]
+   :current-response-message-id [nil safe-parse-int]
+   :messages                    [[] nil]
+   :current-model-stack         [:fast keyword]})
+(defn- fetch-schema [n] (into {} (for [[k v] schema] [k (nth v n)])))
+(def schema-defaults (fetch-schema 0))
+(def schema-transforms (fetch-schema 1))
 
 (defn write [id data]
-  (let [key (session-key id)
-        messages-json (json/generate-string (:messages data))
-        session-map (-> data
-                        (assoc :messages messages-json)
-                        (update :current-model-stack name))]
-    (r/with-transaction
-     (car/hmset key (mapcat identity session-map))
-     (car/expire key session-ttl-seconds))))
+  (let [key (skey id)]
+    (r/with-txn
+      (r/hset key data)
+      (r/expr key ttl-seconds))))
 
-(defn new []
-  {:chat-id                     nil
-   :current-user-message-id     nil
-   :current-response-message-id nil
-   :messages                    []
-   :current-model-stack         :fast})
-
-(defn- parse-long [s]
-  (try (Long/parseLong s) (catch Exception _ nil)))
+(defn write-new [id]
+  (write id schema-defaults))
 
 (defn fetch [id]
-  (let [key (session-key id)
-        raw-session (r/wcar* (car/hgetall key))]
-    (when (seq raw-session)
-      (let [session-map (into {} (for [[k v] (partition 2 raw-session)]
-                                   [(keyword k) v]))]
-        (-> session-map
-            (update :messages #(json/parse-string % true))
-            (update :current-user-message-id parse-long)
-            (update :current-response-message-id parse-long)
-            (update :chat-id parse-long)
-            (update :current-model-stack keyword))))))
+  (let [raw-result (r/wconn* (r/hgetall (skey id)))
+        raw-session (or (seq (partition 2 raw-result)) schema-defaults)]
+    (into
+     {}
+     (for [[k v] raw-session]
+       (let [key (keyword k)
+             t-fn (or (get schema-transforms key) identity)]
+         [key (t-fn v)])))))

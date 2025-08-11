@@ -35,6 +35,7 @@
       (.chatId (str id))
       (.build)))
 
+;; TODO: Handle error: message too long for telegram
 (defn- send-msg [enable-markdown ^String id msg-id msg]
   (doto (-> (SendMessage/builder)
             (.chatId (str id))
@@ -43,6 +44,7 @@
             (.build))
     (.enableMarkdown enable-markdown)))
 
+;; TODO: Handle error: message too long for telegram
 (defn- edit-msg [enable-markdown ^String op-id msg-id msg]
   (doto (-> (EditMessageText/builder)
             (.chatId (str op-id))

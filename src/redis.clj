@@ -1,20 +1,30 @@
 (ns redis
   (:require [mount.core :refer [defstate]]
             [taoensso.carmine :as car]
-            [taoensso.carmine.connections :as car-conn]
             [config]))
 
 (defstate conn
-  :start (let [spec (car-conn/make-conn-spec
-                     :uri (config/redis-uri (config/fetch)))]
-           (car-conn/make-conn-pool spec))
-  :stop (car/conn-pool-shutdown conn))
+  :start
+  {:pool (car/connection-pool {})
+   :spec {:uri (config/redis-uri (config/fetch))}}
+  :stop
+  (when-let [pool (:pool conn)]
+    (.close pool)))
 
-(defmacro wcar* [& body]
+(defmacro wconn* [& body]
   `(car/wcar conn ~@body))
 
-(defmacro with-transaction [& body]
-  `(wcar*
+(defmacro with-txn [& body]
+  `(wconn*
     (car/multi)
     ~@body
     (car/exec)))
+
+(defn expr [key seconds]
+  (car/expire key (or seconds (* 60 60))))
+
+(defn hset [key coll]
+  (apply (partial car/hset key) (mapcat identity coll)))
+
+(defn hgetall [key]
+  (car/hgetall key))
