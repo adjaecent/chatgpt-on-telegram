@@ -1,7 +1,7 @@
 (ns build
   (:require [clojure.tools.build.api :as b]))
 
-(def lib 'my/app)
+(def lib 'adjaecent/chatgpt-on-telegram)
 (def version "0.0.1")
 (def class-dir "target/classes")
 (def basis (b/create-basis {:project "deps.edn"}))

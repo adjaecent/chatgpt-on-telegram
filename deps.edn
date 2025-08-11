@@ -8,8 +8,11 @@
            com.taoensso/carmine                           {:mvn/version "3.3.1"}
            cheshire/cheshire                              {:mvn/version "5.13.0"}}
  :paths   [:clj-paths :resource-paths]
- :aliases {:build {:deps {io.github.clojure/tools.build {:git/tag "v0.10.1" :git/sha "a2d1404"}}
-                   :ns-default build}
+ :aliases {:build {:deps
+                   {io.github.clojure/tools.build {:git/tag "v0.10.10" :git/sha "deedd62"}
+                    org.clojure/clojure {:mvn/version "1.12.0"}}
+                   :ns-default build
+                   :extra-paths ["."]}
            :clj-paths      ["src"]
            :resource-paths ["resources"]
            :run            {:main-opts ["-m" "main"]}}}

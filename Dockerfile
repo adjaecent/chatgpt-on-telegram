@@ -1,5 +1,5 @@
 # --- Build Stage ---
-FROM clojure:tools-deps-slim AS build
+FROM clojure:tools-deps AS build
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ FROM openjdk:23-slim
 WORKDIR /app
 
 # Copy the uberjar from the build stage
-COPY --from=build /app/target/my/app-0.0.1-standalone.jar /app/app.jar
+COPY --from=build /app/target/chatgpt-on-telegram-0.0.1-standalone.jar /app/app.jar
 
 # Run the app
 CMD ["java", "-jar", "/app/app.jar"]
