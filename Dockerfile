@@ -1,5 +1,5 @@
 # --- Build Stage ---
-FROM clojure:tools-deps-slim as build
+FROM clojure:tools-deps-slim AS build
 
 WORKDIR /app
 
