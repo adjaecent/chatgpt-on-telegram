@@ -10,7 +10,7 @@ services:
     depends_on:
       - redis
     environment:
-      - REDIS_URI=redis://redis:6380
+      - REDIS_URI=redis://redis:6379
       - APP_ENV=prod
       - OPENAI_KEY=${OPENAI_KEY}
       - TELEGRAM_BOT_KEY=${TELEGRAM_BOT_KEY}
