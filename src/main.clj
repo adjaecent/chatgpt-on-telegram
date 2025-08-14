@@ -3,7 +3,8 @@
             [redis]
             openai
             processor
-            telegram))
+            telegram)
+  (:gen-class))
 
 (defn add-shutdown-hook []
   (.addShutdownHook (Runtime/getRuntime)
