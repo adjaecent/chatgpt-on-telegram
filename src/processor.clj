@@ -24,27 +24,39 @@
 (defmethod process-command :general [chat-id user-msg-id _] (process-model-stack-change chat-id user-msg-id :general))
 
 (defmethod process-command :reset [chat-id user-msg-id _]
-  (session/write-new chat-id)
+  (session/write chat-id)
   (telegram/send-first-response chat-id user-msg-id "_Your session has been reset_ ⏱" true))
 
 (defmethod process-command :default [chat-id user-msg-id _]
   (telegram/send-first-response chat-id user-msg-id "_Unknown command. Check the available list of commands from the command menu_ 🚫" true))
 
-(defn- process-api-response
+(defn- process-new-response
+  [{:keys [chat-id current-user-message-id] :as session} chunk eof?]
+  (let [response-message-id (telegram/send-first-response chat-id current-user-message-id chunk eof?)
+        updated-session (assoc session :current-response-message-id response-message-id)]
+    (if eof?
+      (session/write chat-id updated-session [(openai/msgfmt :assistant chunk)])
+      (session/write chat-id updated-session))))
+
+(defn- process-existing-response
+  [{:keys [chat-id current-response-message-id] :as session} chunk eof?]
+  (telegram/send-edited-response current-response-message-id chat-id chunk eof?)
+  (when eof?
+    (session/write chat-id session [(openai/msgfmt :assistant chunk)])))
+
+(defn- openai->telegram
   ([session-id chunk]
-   (process-api-response session-id chunk false))
+   (openai->telegram session-id chunk false))
   ([session-id chunk eof?]
    (when-not (empty? chunk)
-     (let [{:keys [chat-id current-user-message-id] :as session} (session/fetch session-id)
-           eof?                                                  (boolean eof?)]
-       (if-let [current-response-message-id (:current-response-message-id session)]
-         (telegram/send-edited-response current-response-message-id chat-id chunk eof?)
-         (->> (telegram/send-first-response chat-id current-user-message-id chunk eof?)
-              (assoc session :current-response-message-id)
-              (session/write chat-id)))))))
+     (let [session (session/fetch session-id)
+           eof? (boolean eof?)]
+       (if-not (:current-response-message-id session)
+         (process-new-response session chunk eof?)
+         (process-existing-response session chunk eof?))))))
 
 ;; TODO: add a pre-prompt to sanitize the message to be relevant for telegram content size always
-(defn process-user-input [chat-id user-msg-id prompt-content]
+(defn input->openai [chat-id user-msg-id prompt-content]
   (if (s/starts-with? prompt-content "/")
     ;; --- IF a command, call the multimethod ---
     (process-command chat-id user-msg-id prompt-content)
@@ -53,9 +65,8 @@
     (let [session (-> (session/fetch chat-id)
                       (assoc :chat-id chat-id)
                       (assoc :current-user-message-id user-msg-id)
-                      (assoc :current-response-message-id nil)
-                      (update :messages conj {:role :user :content prompt-content}))]
-      (session/write chat-id session)
+                      (assoc :current-response-message-id nil))]
+      (session/write chat-id session [(openai/msgfmt :user prompt-content)])
       (openai/chat-completion-streaming (:current-model-stack session)
                                         prompt-content
-                                        (partial process-api-response chat-id)))))
+                                        (partial openai->telegram chat-id)))))

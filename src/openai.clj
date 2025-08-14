@@ -24,6 +24,9 @@
              (.build))
   :stop (.close client))
 
+(defn msgfmt [role message]
+  {:role role :content message})
+
 (defn parse-choice [choice]
   (-> choice
       (.delta)

@@ -66,7 +66,8 @@
   (.write w (str "#<TBuffer thres=" (.threshold buf) ",cur=" (count @(.iatom buf)) ">")))
 
 (defn buffer
-  "Creates an atom-like interface that stores a sequence of characters.
+  "
+  Creates an atom-like interface that stores a sequence of characters.
   Only dereferences when the content length meets or exceeds the threshold
   for the first time, or subsequently when it reaches the next multiple
   of the threshold. After a successful dereference, the internal counter

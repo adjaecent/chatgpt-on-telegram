@@ -15,7 +15,7 @@
                #'redis/conn)
 
   (mount/start-with-args
-   {:input-processor-fn processor/process-user-input}
+   {:input-processor-fn processor/input->openai}
     #'telegram/consumer))
 
 (defn -main
