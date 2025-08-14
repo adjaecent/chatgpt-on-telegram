@@ -17,9 +17,7 @@
 
 (defmethod process-command :fast [chat-id user-msg-id _] (process-model-stack-change chat-id user-msg-id :fast))
 
-(defmethod process-command :reason [chat-id user-msg-id _] (process-model-stack-change chat-id user-msg-id :reason))
-
-(defmethod process-command :code [chat-id user-msg-id _] (process-model-stack-change chat-id user-msg-id :code))
+(defmethod process-command :tech [chat-id user-msg-id _] (process-model-stack-change chat-id user-msg-id :tech))
 
 (defmethod process-command :general [chat-id user-msg-id _] (process-model-stack-change chat-id user-msg-id :general))
 
@@ -67,6 +65,7 @@
                       (assoc :current-user-message-id user-msg-id)
                       (assoc :current-response-message-id nil))]
       (session/write chat-id session [(openai/msgfmt :user prompt-content)])
-      (openai/chat-completion-streaming (:current-model-stack session)
-                                        prompt-content
+      (openai/chat-completion-streaming user-msg-id
+                                        (:current-model-stack session)
+                                        (session/fetch chat-id true)
                                         (partial openai->telegram chat-id)))))

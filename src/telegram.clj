@@ -23,10 +23,9 @@
 (defonce connect-timeout 5000)
 (def bot-token (-> (c/fetch) (c/telegram-bot-key)))
 (def commands
-  {:fast    ["/fast"    "Get a quick answer ⚡"]
-   :general ["/general" "Get a detailed, general-purpose answer 📚"]
-   :reason  ["/reason"  "Get an answer with step-by-step reasoning 🤔"]
-   :code    ["/code"    "Get an answer more suited for programming 💻"]
+  {:fast    ["/fast"    "Quick answers ⚡"]
+   :general ["/general" "Detailed, general-purpose answer 📚"]
+   :tech    ["/tech"    "Technical, reasoning, programming, math 👩🏼‍🔬"]
    :reset   ["/reset"   "Reset your conversation session 🔄"]})
 
 (defn- typing-action [^String id]

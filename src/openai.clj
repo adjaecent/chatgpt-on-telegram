@@ -6,15 +6,17 @@
   (:import com.openai.client.okhttp.OpenAIOkHttpClient
            com.openai.core.http.AsyncStreamResponse$Handler
            com.openai.core.JsonValue
-           [com.openai.models.chat.completions ChatCompletionChunk ChatCompletionCreateParams]
+           [com.openai.models.chat.completions ChatCompletionAssistantMessageParam ChatCompletionChunk ChatCompletionCreateParams ChatCompletionMessageParam ChatCompletionUserMessageParam]
            com.openai.models.ChatModel))
 
 (def open-router-base-url "https://openrouter.ai/api/v1")
 (def api-token (-> (c/fetch) (c/openai-key)))
 (def model-stacks {:fast    ["google/gemini-2.5-flash-lite", "meta-llama/llama-guard-2-8b"],
                    :general ["openai/gpt-4.1:online" "openai/gpt-4.1"],
-                   :code    ["anthropic/claude-3.7-sonnet:online" "anthropic/claude-3.7-sonnet"],
-                   :reason  ["google/gemini-2.5-pro:online" "google/gemini-2.5-pro"]})
+                   :tech    ["anthropic/claude-3.7-sonnet:online" "anthropic/claude-3.7-sonnet"]})
+
+;; unused stacks:
+;; :reason  ["google/gemini-2.5-pro:online" "google/gemini-2.5-pro"]
 
 (defstate client
   :start (-> (OpenAIOkHttpClient/builder)
@@ -26,6 +28,17 @@
 
 (defn msgfmt [role message]
   {:role role :content message})
+
+(defn msg->param [{:keys [role content]}]
+  (case role
+    :user      (ChatCompletionMessageParam/ofUser
+                (-> (ChatCompletionUserMessageParam/builder)
+                    (.content content)
+                    (.build)))
+    :assistant (ChatCompletionMessageParam/ofAssistant
+                (-> (ChatCompletionAssistantMessageParam/builder)
+                    (.content content)
+                    (.build)))))
 
 (defn parse-choice [choice]
   (-> choice
@@ -70,13 +83,15 @@
     (.whenComplete (on-stream-complete chunk-process-fn buffer))
     (deref)))
 
-(defn chat-completion-streaming [model-stack ^String msg on-chunk-process-fn]
+(defn chat-completion-streaming [user-id model-stack messages on-chunk-process-fn]
   (let [model-stack     (get model-stacks (or model-stack :fast))
         params          (-> (ChatCompletionCreateParams/builder)
-                            (.addUserMessage msg)
+                            (.messages (map msg->param messages))
                             (.model (ChatModel/of (first model-stack)))
                             (.putAdditionalBodyProperty "stream", (JsonValue/from true))
+                            (.putAdditionalBodyProperty "user", (JsonValue/from (str user-id)))
                             (.putAdditionalBodyProperty "models", (JsonValue/from model-stack))
+                            (.putAdditionalBodyProperty "transforms", (JsonValue/from ["middle-out"]))
                             (.build))
         stream          (-> client
                             (.async)

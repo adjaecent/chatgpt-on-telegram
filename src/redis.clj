@@ -48,6 +48,6 @@
      (do
        (if (sequential? el)
          (doseq [item el]
-           (car/lpush key item))
-         (car/lpush key el))
+           (car/rpush key item))
+         (car/rpush key el))
        (car/ltrim key 0 (- n 1))))))
