@@ -10,6 +10,9 @@ RUN clojure -P
 # Copy the rest of the app
 COPY . .
 
+# Create secrets.edn from sample for the build
+RUN cp resources/secrets.sample.edn resources/secrets.edn
+
 # Build the uberjar
 RUN clojure -X:build uber
 
