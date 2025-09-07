@@ -6,9 +6,11 @@
     (catch Exception _ nil)))
 
 (defn safe-parse-int [n]
-  (try
-    (Integer/parseInt n)
-    (catch Exception _ nil)))
+  (if (int? n)
+    n
+    (try
+      (Integer/parseInt n)
+      (catch Exception _ nil))))
 
 (defmacro when-let*
   ([bindings & body]
@@ -17,22 +19,12 @@
         (when-let* ~(drop 2 bindings) ~@body))
      `(do ~@body))))
 
-(defn between? [x a b]
-  (and (>= x a) (<= x b)))
-
 (defn text-excess [text threshold]
-  (let [len (count text)
+  (let [len         (count text)
         split-point (min threshold len)]
-    [(subs text 0 split-point)
-     (subs text split-point)]))
-
-(defn replace-last [original-coll new-coll]
-  (into (pop original-coll) new-coll))
-
-(defn add-to-last [coll s]
- (if (empty? coll)
-   [s]
-   (conj (pop coll) (str (last coll) s))))
+    (when-not (empty? text)
+      (concat [(subs text 0 split-point)]
+              (text-excess (subs text split-point) threshold)))))
 
 (defprotocol IBufferOps
   (upd! [buf s])
@@ -43,57 +35,51 @@
   clojure.lang.IDeref
   (deref [_]
     (let [current-val        @iatom
-          last-partition-val (last current-val)
+          last-partition-val (:value (last current-val))
           current-count      (count last-partition-val)]
 
       ;; when the size exceeds partition-at, split the text
       (when (and (> partition-at 0)
                  (> current-count partition-at))
-        (prn "size exceeded")
-        (swap! iatom replace-last (text-excess last-partition-val partition-at))
+        (letfn [(replace-last [original new-vals]
+                  (into (pop original)
+                        (map (fn [v] {:frozen false :value v}) new-vals)))]
+          (swap! iatom replace-last (text-excess last-partition-val partition-at)))
         (reset! last-deref-multiple-atom 0))
 
-      (prn @iatom)
-
       (let [current-val        @iatom
-            last-partition-val (last current-val)
+            last-partition-val (:value (last current-val))
             current-count      (count last-partition-val)
             last-multiple      @last-deref-multiple-atom
-            three-percent      (* threshold 0.03)
             eight-percent      (* threshold 0.08)
             target-size        (* (inc last-multiple) threshold)]
-
-        (prn last-partition-val)
-        (prn last-multiple)
-        (prn current-count)
 
         (cond
           ;; when it's the first deref attempt, and the buffer is between 3-8% of threshold
           ;; deref immediately
           ;; this is an optimization for first-time early responses
           (and (== last-multiple -1)
-               (between? current-count three-percent eight-percent))
+               (>= current-count eight-percent))
           (do
-            (reset! last-deref-multiple-atom 0)
-            last-partition-val)
+            (reset! last-deref-multiple-atom (quot current-count threshold))
+            current-val)
 
           ;; otherwise, deref when we've buffered the next multiple of threshold
           (and (> last-multiple -1)
                (>= current-count target-size))
           (do
             (reset! last-deref-multiple-atom (quot current-count threshold))
-            last-partition-val)
-
-          ;; reset the deref-multiple back to 0 so multiples can start working normally
-          (== last-multiple -1)
-          (do
-            (reset! last-deref-multiple-atom 0)
-            nil)
+            current-val)
 
           :else nil))))
 
   IBufferOps
-  (upd! [buf s] (swap! (.iatom buf) add-to-last s))
+  (upd! [buf s] (letfn [(add-to-last [coll s]
+                          (if (empty? coll)
+                            [{:frozen false :value s}]
+                            (conj (mapv #(assoc % :frozen true) (pop coll))
+                                  (update (last coll) :value str s))))]
+                  (swap! (.iatom buf) add-to-last s)))
   (mut! [buf newval]
     (reset! (.iatom buf) [newval])
     (reset! (.last-deref-multiple-atom buf) -1)
@@ -111,6 +97,6 @@
   of the threshold. After a successful dereference, the internal counter
   is updated based on the current content length divided by the threshold.
   Defaults to a threshold of 200."
-  ([] (buffer 200 4096))
-  ([threshold] (buffer threshold 4096))
+  ([] (buffer 200 4070))
+  ([threshold] (buffer threshold 4070))
   ([threshold partition-at] (TBuffer. (atom []) (atom -1) threshold partition-at)))
