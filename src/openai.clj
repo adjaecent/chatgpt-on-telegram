@@ -1,7 +1,7 @@
 (ns openai
   (:require [config :as c]
             [mount.core :refer [defstate]]
-            [sundry :refer [buffer drn! swp!]]
+            [sundry :refer [buffer drn! upd!]]
             [threads :as t])
   (:import com.openai.client.okhttp.OpenAIOkHttpClient
            com.openai.core.http.AsyncStreamResponse$Handler
@@ -59,7 +59,7 @@
 (defn on-chunk-process [process-fn buffer]
   (fn [^ChatCompletionChunk chunk]
     (mapcat (fn [choice]
-              (swp! buffer str (parse-choice choice))
+              (upd! buffer (parse-choice choice))
               (process-fn @buffer))
             (choices chunk))))
 

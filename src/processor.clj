@@ -28,30 +28,35 @@
 (defmethod process-command :default [chat-id user-msg-id _]
   (telegram/send-first-response chat-id user-msg-id "_Unknown command. Check the available list of commands from the command menu_ 🚫" true))
 
-(defn- process-new-response
-  [{:keys [chat-id current-user-message-id] :as session} chunk eof?]
-  (let [response-message-id (telegram/send-first-response chat-id current-user-message-id chunk eof?)
-        updated-session (assoc session :current-response-message-id response-message-id)]
+(defn process-messages [{:keys [chat-id current-user-message-id current-response-message-ids] :as session} chunks eof?]
+  (let [reply-to        (atom current-user-message-id)
+        updated-session (atom session)]
+    (doall
+      (map-indexed
+        (fn [idx {:keys [frozen value]}]
+          (let [chunk (if (> idx 0) (str "__(continued...)__\n\n" value) value)]
+            (if-let [id (get current-response-message-ids idx)]
+              (do
+                ;; Telegram API doesn't support editing message with the same text and markup type more than once
+                (when (or (not frozen) eof?)
+                  (telegram/send-edited-response chat-id id chunk eof?))
+                (reset! reply-to id))
+              (let [message-id (telegram/send-first-response chat-id @reply-to chunk eof?)]
+                (swap! updated-session update :current-response-message-ids conj message-id)
+                (reset! reply-to message-id)))))
+        chunks))
     (if eof?
-      (session/write chat-id updated-session [(openai/msgfmt :assistant chunk)])
-      (session/write chat-id updated-session))))
-
-(defn- process-existing-response
-  [{:keys [chat-id current-response-message-id] :as session} chunk eof?]
-  (telegram/send-edited-response current-response-message-id chat-id chunk eof?)
-  (when eof?
-    (session/write chat-id session [(openai/msgfmt :assistant chunk)])))
+      (session/write chat-id
+                     @updated-session
+                     [(openai/msgfmt :assistant (s/join chunks))])
+      (session/write chat-id @updated-session))))
 
 (defn- openai->telegram
-  ([session-id chunk]
-   (openai->telegram session-id chunk false))
-  ([session-id chunk eof?]
-   (when-not (empty? chunk)
-     (let [session (session/fetch session-id)
-           eof? (boolean eof?)]
-       (if-not (:current-response-message-id session)
-         (process-new-response session chunk eof?)
-         (process-existing-response session chunk eof?))))))
+  ([session-id chunks]
+   (openai->telegram session-id chunks false))
+  ([session-id chunks eof?]
+   (when-not (empty? chunks)
+     (process-messages (session/fetch session-id) chunks (boolean eof?)))))
 
 ;; TODO: add a pre-prompt to sanitize the message to be relevant for telegram content size always
 (defn input->openai [chat-id user-msg-id prompt-content]
@@ -63,9 +68,9 @@
     (let [session (-> (session/fetch chat-id)
                       (assoc :chat-id chat-id)
                       (assoc :current-user-message-id user-msg-id)
-                      (assoc :current-response-message-id nil))]
+                      (assoc :current-response-message-ids []))]
       (session/write chat-id session [(openai/msgfmt :user prompt-content)])
-      (openai/chat-completion-streaming user-msg-id
+      (openai/chat-completion-streaming chat-id
                                         (:current-model-stack session)
                                         (session/fetch chat-id true)
                                         (partial openai->telegram chat-id)))))

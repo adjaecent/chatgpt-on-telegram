@@ -7,20 +7,22 @@
 (def messages-ttl-seconds (* 60 60 2))
 (def messages-to-keep 20)
 (def schema
-  {:chat-id                     [nil safe-parse-long]
-   :current-user-message-id     [nil safe-parse-int]
-   :current-response-message-id [nil safe-parse-int]
-   :current-model-stack         [:fast keyword]})
+  {:chat-id                      [nil safe-parse-long]
+   :current-user-message-id      [nil safe-parse-int]
+   :current-response-message-ids [[] safe-parse-int]
+   :current-model-stack          [:fast keyword]})
 (defn- fetch-schema [n] (into {} (for [[k v] schema] [k (nth v n)])))
 (def schema-defaults (fetch-schema 0))
 (def schema-transforms (fetch-schema 1))
 (defn- transform-session [raw-session]
   (into
-     {}
-     (for [[k v] raw-session]
-       (let [key (keyword k)
-             t-fn (or (get schema-transforms key) identity)]
-         [key (t-fn v)]))))
+    {}
+    (for [[k v] raw-session]
+      (let [key  (keyword k)
+            t-fn (or (get schema-transforms key) identity)]
+        (if (sequential? v)
+          [key (mapv t-fn v)]
+          [key (t-fn v)])))))
 
 (defn write
   "
@@ -46,5 +48,5 @@
      (fetch id)))
   ([id]
    (let [session-data (r/wconn* (r/hgetall (skey id)))
-         session (or (seq (partition 2 session-data)) schema-defaults)]
+         session      (or (seq (partition 2 session-data)) schema-defaults)]
      (transform-session session))))
