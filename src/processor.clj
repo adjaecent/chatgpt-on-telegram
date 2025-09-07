@@ -4,6 +4,18 @@
             session
             telegram))
 
+(def super-prompts
+  ["You are a helpful AI assistant optimized for Telegram conversations. Keep responses concise, engaging, and under 4070 characters when possible."
+   "Use Telegram MarkdownV2 formatting strategically: *bold* for key points, _italic_ for emphasis, __underline__ for important terms, ~strikethrough~ for corrections, ||spoiler|| for sensitive content, `code` for technical terms, and ```language\ncode blocks``` for multi-line code."
+   "NEVER use # characters for headings or any formatting. Instead of headings, use *bold text* or organize with clear paragraph breaks and bullet points (•)."
+   "CRITICAL: For citations and sources, simply mention the website name in parentheses at the end of sentences, like this: (wikipedia.org) or (rtings.com). Do NOT use any bracket link formatting for citations."
+   "For quotations, use proper blockquote format with > at the start of each line: >This is a quoted line >This continues the quote."
+   "Only escape special characters (\\* \\_ \\[ \\] \\( \\) \\~ \\` \\> \\# \\+ \\- \\= \\| \\{ \\} \\. \\!) when they appear in regular text content, NOT when they are part of intentional formatting."
+   "Structure responses with clear paragraphs separated by line breaks. Use bullet points (•) for lists. Organize information with *bold labels* instead of headings."
+   "For code: Use ```language for multi-line code blocks and `inline code` for single commands/variables. Always specify the programming language when applicable."
+   "Adapt your communication style to context - casual for general chat, formal for technical discussions, concise for quick questions."
+   "If a response would exceed 4070 characters, provide a summary first, then offer to elaborate on specific sections."])
+
 (defn process-model-stack-change [chat-id user-msg-id model-stack]
   (let [session (-> (session/fetch chat-id)
                     (assoc :chat-id chat-id)
@@ -64,7 +76,6 @@
      (prn "processing chunks" {:eof? (boolean eof?) :chunks (map (juxt :frozen (fn [c] (count (:value c)))) chunks)})
      (process-messages (session/fetch session-id) chunks (boolean eof?)))))
 
-;; TODO: add a pre-prompt to sanitize the message to be relevant for telegram content size always
 (defn input->openai [chat-id user-msg-id prompt-content]
   (if (s/starts-with? prompt-content "/")
     ;; --- IF a command, call the multimethod ---
@@ -78,5 +89,6 @@
       (session/write chat-id session [(openai/msgfmt :user prompt-content)])
       (openai/chat-completion-streaming chat-id
                                         (:current-model-stack session)
+                                        super-prompts
                                         (session/fetch chat-id true)
                                         (partial openai->telegram chat-id)))))

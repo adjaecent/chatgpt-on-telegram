@@ -6,7 +6,7 @@
   (:import com.openai.client.okhttp.OpenAIOkHttpClient
            com.openai.core.http.AsyncStreamResponse$Handler
            com.openai.core.JsonValue
-           [com.openai.models.chat.completions ChatCompletionAssistantMessageParam ChatCompletionChunk ChatCompletionCreateParams ChatCompletionMessageParam ChatCompletionUserMessageParam]
+           [com.openai.models.chat.completions ChatCompletionAssistantMessageParam ChatCompletionChunk ChatCompletionCreateParams ChatCompletionMessageParam ChatCompletionUserMessageParam ChatCompletionSystemMessageParam]
            com.openai.models.ChatModel))
 
 (def open-router-base-url "https://openrouter.ai/api/v1")
@@ -31,6 +31,10 @@
 
 (defn msg->param [{:keys [role content]}]
   (case role
+    :system    (ChatCompletionMessageParam/ofSystem
+                (-> (ChatCompletionSystemMessageParam/builder)
+                    (.content content)
+                    (.build)))
     :user      (ChatCompletionMessageParam/ofUser
                 (-> (ChatCompletionUserMessageParam/builder)
                     (.content content)
@@ -85,10 +89,12 @@
     (.whenComplete on-stream-complete)
     (deref)))
 
-(defn chat-completion-streaming [user-id model-stack messages on-chunk-process-fn]
+(defn chat-completion-streaming [user-id model-stack system-messages messages on-chunk-process-fn]
   (let [model-stack     (get model-stacks (or model-stack :fast))
+        system-messages (map #(msgfmt :system %) system-messages)
+        all-messages    (concat system-messages messages)
         params          (-> (ChatCompletionCreateParams/builder)
-                            (.messages (map msg->param messages))
+                            (.messages (map msg->param all-messages))
                             (.model (ChatModel/of (first model-stack)))
                             (.putAdditionalBodyProperty "stream", (JsonValue/from true))
                             (.putAdditionalBodyProperty "user", (JsonValue/from (str user-id)))
