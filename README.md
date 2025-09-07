@@ -14,5 +14,6 @@
 
 ### Next up & nice-to-haves
 
+- [ ] Support generating images / videos with fal.ai
 - [ ] Upload voice recordings and reply to those
 - [ ] Support parsing attached media (images, files, videos)
