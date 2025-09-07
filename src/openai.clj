@@ -63,24 +63,26 @@
               (process-fn @buffer))
             (choices chunk))))
 
-(defn on-chunk-complete [_ error]
-  (if (.isPresent error)
-    (println "Completed chunk with error: " (.get error))
-    (println "Completed chunk.")))
-
-(defn on-stream-complete [process-fn buffer]
+(defn on-chunk-complete [process-fn buffer]
   (fn [_ error]
-    (if error
-      (println "Stream did not finish. Something went wrong!")
-      (println "No more chunks left."))
-    (process-fn (drn! buffer) :eof)))
+    (if (.isPresent error)
+      (println "Completed chunk with error: " (.get error))
+      (do
+        (process-fn (drn! buffer) :eof)
+        (println "Completed chunk. Drained the buffer.")))))
+
+(defn on-stream-complete [_ error]
+  (if error
+    (println "Stream did not finish. Something went wrong!")
+    (println "No more chunks left.")))
 
 (defn register-stream-initiate [stream chunk-process-fn buffer]
-  (.subscribe stream (async-stream-handler (on-chunk-process chunk-process-fn buffer) on-chunk-complete)))
+  (.subscribe stream (async-stream-handler (on-chunk-process chunk-process-fn buffer)
+                                           (on-chunk-complete chunk-process-fn buffer))))
 
 (defn register-stream-complete [stream chunk-process-fn buffer]
   (doto (.onCompleteFuture stream)
-    (.whenComplete (on-stream-complete chunk-process-fn buffer))
+    (.whenComplete on-stream-complete)
     (deref)))
 
 (defn chat-completion-streaming [user-id model-stack messages on-chunk-process-fn]
