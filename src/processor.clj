@@ -46,7 +46,7 @@
          updated-session session
          reply-to        current-user-message-id]
     (if-let [{:keys [frozen value]} (first chunks)]
-      (let [message (if (> idx 0) (str "_(continued...)_\n\n" value) value)]
+      (let [message (if (> idx 0) (telegram/continued-msg value) value)]
         (if-let [id (get current-response-message-ids idx)]
           (do
             ;; Telegram API doesn't support editing message with the same text and markup type more than once

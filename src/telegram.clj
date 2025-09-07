@@ -105,6 +105,9 @@
 (defn- exec [method]
   (.execute http-client method))
 
+(defn continued-msg [msg]
+  (str "_(continued…)_\n\n" msg))
+
 (defn send-first-response [chat-id user-msg-id chunk eof?]
   (exec (typing-action chat-id))
   (->> chunk
