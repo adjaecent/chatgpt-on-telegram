@@ -10,6 +10,7 @@
   {:chat-id                      [nil safe-parse-long]
    :current-user-message-id      [nil safe-parse-int]
    :current-response-message-ids [[] safe-parse-int]
+   :long-conversations           [false boolean]
    :current-model-stack          [:fast keyword]})
 (defn- fetch-schema [n] (into {} (for [[k v] schema] [k (nth v n)])))
 (def schema-defaults (fetch-schema 0))

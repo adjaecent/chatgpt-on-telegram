@@ -19,6 +19,9 @@
         (when-let* ~(drop 2 bindings) ~@body))
      `(do ~@body))))
 
+(defn switch-label [on?]
+  (if on? "enabled" "disabled"))
+
 (defn text-excess [text threshold]
   (let [len         (count text)
         split-point (min threshold len)]

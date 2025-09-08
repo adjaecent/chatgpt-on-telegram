@@ -2,19 +2,28 @@
   (:require [clojure.string :as s]
             openai
             session
-            telegram))
+            telegram
+            [sundry :refer [switch-label]]))
 
-(def super-prompts
-  ["You are a helpful AI assistant optimized for Telegram conversations. Keep responses concise, engaging, and under 4070 characters when possible."
-   "Use Telegram MarkdownV2 formatting strategically: *bold* for key points, _italic_ for emphasis, __underline__ for important terms, ~strikethrough~ for corrections, ||spoiler|| for sensitive content, `code` for technical terms, and ```language\ncode blocks``` for multi-line code."
+(def base-super-prompts
+  ["You are a helpful AI assistant optimized for Telegram conversations. Keep responses concise and engaging. Keep the context crisp."
+   "Use Telegram MarkdownV2 formatting strategically: *bold* for key points and important terms, _italic_ for emphasis ~strikethrough~ for corrections, ||spoiler|| for sensitive content, `code` for technical terms, and ```language\ncode blocks``` for multi-line code."
    "NEVER use # characters for headings or any formatting. Instead of headings, use *bold text* or organize with clear paragraph breaks and bullet points (•)."
    "CRITICAL: For citations and sources, simply mention the website name in parentheses at the end of sentences, like this: (wikipedia.org) or (rtings.com). Do NOT use any bracket link formatting for citations."
    "For quotations, use proper blockquote format with > at the start of each line: >This is a quoted line >This continues the quote."
    "Only escape special characters (\\* \\_ \\[ \\] \\( \\) \\~ \\` \\> \\# \\+ \\- \\= \\| \\{ \\} \\. \\!) when they appear in regular text content, NOT when they are part of intentional formatting."
    "Structure responses with clear paragraphs separated by line breaks. Use bullet points (•) for lists. Organize information with *bold labels* instead of headings."
    "For code: Use ```language for multi-line code blocks and `inline code` for single commands/variables. Always specify the programming language when applicable."
-   "Adapt your communication style to context - casual for general chat, formal for technical discussions, concise for quick questions."
-   "If a response would exceed 4070 characters, provide a summary first, then offer to elaborate on specific sections."])
+   "Adapt your communication style to context - casual for general chat, formal for technical discussions, concise for quick questions."])
+
+(def concise-super-prompts
+  (concat
+   base-super-prompts
+   ["Keep messages under 4090 characters whenever possible."
+    "If a response would exceed 4090 characters, provide a summary first, then offer to elaborate on specific sections."]))
+
+(defn super-prompts [session]
+  (if (:long-conversations session) base-super-prompts concise-super-prompts))
 
 (defn process-model-stack-change [chat-id user-msg-id model-stack]
   (let [session (-> (session/fetch chat-id)
@@ -36,6 +45,16 @@
 (defmethod process-command :reset [chat-id user-msg-id _]
   (session/write chat-id)
   (telegram/send-first-response chat-id user-msg-id "_Your session has been reset_ ⏱" true))
+
+(defmethod process-command :long [chat-id user-msg-id _]
+  (let [session (session/fetch chat-id)
+        updated-long-conversations? (not (:long-conversations session))]
+    (session/write chat-id (assoc session :long-conversations updated-long-conversations?))
+    (telegram/send-first-response chat-id user-msg-id
+                                  (str "Long conversations are now "
+                                       (switch-label updated-long-conversations?)
+                                       ".\n\nTo re-enable, type '/long'")
+                                  true)))
 
 (defmethod process-command :default [chat-id user-msg-id _]
   (telegram/send-first-response chat-id user-msg-id "_Unknown command. Check the available list of commands from the command menu_ 🚫" true))
@@ -89,6 +108,6 @@
       (session/write chat-id session [(openai/msgfmt :user prompt-content)])
       (openai/chat-completion-streaming chat-id
                                         (:current-model-stack session)
-                                        super-prompts
+                                        (super-prompts session)
                                         (session/fetch chat-id true)
                                         (partial openai->telegram chat-id)))))

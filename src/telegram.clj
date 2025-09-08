@@ -26,6 +26,7 @@
   {:fast    ["/fast"    "Quick answers ⚡"]
    :general ["/general" "Detailed, general-purpose answer 📚"]
    :tech    ["/tech"    "Technical, reasoning, programming, math 👩🏼‍🔬"]
+   :long    ["/long",   "Long conversation mode, more context 🪘"]
    :reset   ["/reset"   "Reset your conversation session 🔄"]})
 
 (defn- typing-action [^String id]
