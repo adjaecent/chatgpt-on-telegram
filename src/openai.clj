@@ -84,7 +84,7 @@
   (.subscribe stream (async-stream-handler (on-chunk-process chunk-process-fn buffer)
                                            (on-chunk-complete chunk-process-fn buffer))))
 
-(defn register-stream-complete [stream chunk-process-fn buffer]
+(defn register-stream-complete [stream]
   (doto (.onCompleteFuture stream)
     (.whenComplete on-stream-complete)
     (deref)))
@@ -108,4 +108,4 @@
                             (.createStreaming params))
         response-buffer (buffer)]
     (register-stream-initiate stream on-chunk-process-fn response-buffer)
-    (register-stream-complete stream on-chunk-process-fn response-buffer)))
+    (register-stream-complete stream)))
