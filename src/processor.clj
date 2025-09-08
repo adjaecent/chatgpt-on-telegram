@@ -53,7 +53,7 @@
     (telegram/send-first-response chat-id user-msg-id
                                   (str "Long conversations are now "
                                        (switch-label updated-long-conversations?)
-                                       ".\n\nTo re-enable, type '/long'")
+                                       ".\n\nTo toggle, type '/long'")
                                   true)))
 
 (defmethod process-command :default [chat-id user-msg-id _]
