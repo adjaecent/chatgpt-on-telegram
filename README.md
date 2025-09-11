@@ -11,9 +11,12 @@
 - [x] Maintain user sessions
 - [x] Markdown support for code stuff
 - [x] Model switching
+- [ ] Store token usage metadata
 
 ### Next up & nice-to-haves
 
+- [ ] Better long-term memory (embeddings?)
+- [ ] Ambient mode in group chats (local, without super-prompting?)
 - [ ] Support generating images / videos with fal.ai
 - [ ] Upload voice recordings and reply to those
 - [ ] Support parsing attached media (images, files, videos)
