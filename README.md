@@ -12,11 +12,13 @@
 - [x] Markdown support for code stuff
 - [x] Model switching
 - [ ] Store token usage metadata
+- [ ] Support basic group chat (respond when prompted)
+- [ ] Support generating images / videos with fal.ai
+- [ ] Iron out any message trimming, reliability bugs, better error-handling
 
 ### Next up & nice-to-haves
 
 - [ ] Better long-term memory (embeddings?)
 - [ ] Ambient mode in group chats (local, without super-prompting?)
-- [ ] Support generating images / videos with fal.ai
 - [ ] Upload voice recordings and reply to those
 - [ ] Support parsing attached media (images, files, videos)
