@@ -1,6 +1,7 @@
 (ns openai
-  (:require [config :as c]
+  (:require [clojure.tools.logging :as log]
             [mount.core :refer [defstate]]
+            [config :as c]
             [sundry :refer [buffer drn! upd!]]
             [threads :as t])
   (:import com.openai.client.okhttp.OpenAIOkHttpClient
@@ -70,15 +71,15 @@
 (defn on-chunk-complete [process-fn buffer]
   (fn [_ error]
     (if (.isPresent error)
-      (println "Completed chunk with error: " (.get error))
+      (log/error "Completed chunk with error: " (.get error))
       (do
         (process-fn (drn! buffer) :eof)
-        (println "Completed chunk. Drained the buffer.")))))
+        (log/info "Completed chunk. Drained the buffer.")))))
 
 (defn on-stream-complete [_ error]
   (if error
-    (println "Stream did not finish. Something went wrong!")
-    (println "No more chunks left.")))
+    (log/error "Stream did not finish. Something went wrong!")
+    (log/info "No more chunks left.")))
 
 (defn register-stream-initiate [stream chunk-process-fn buffer]
   (.subscribe stream (async-stream-handler (on-chunk-process chunk-process-fn buffer)

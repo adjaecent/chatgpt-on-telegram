@@ -1,5 +1,6 @@
 (ns processor
   (:require [clojure.string :as s]
+            [clojure.tools.logging :as log]
             openai
             session
             telegram
@@ -92,7 +93,7 @@
    (openai->telegram session-id chunks false))
   ([session-id chunks eof?]
    (when-not (empty? chunks)
-     (prn "processing chunks" {:eof? (boolean eof?) :chunks (map (juxt :frozen (fn [c] (count (:value c)))) chunks)})
+     (log/info "processing chunks" {:eof? (boolean eof?) :chunks (map (juxt :frozen (fn [c] (count (:value c)))) chunks)})
      (process-messages (session/fetch session-id) chunks (boolean eof?)))))
 
 (defn input->openai [chat-id user-msg-id prompt-content]

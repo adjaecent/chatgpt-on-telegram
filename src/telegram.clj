@@ -1,6 +1,7 @@
 (ns telegram
-  (:require [config :as c]
+  (:require [clojure.tools.logging :as log]
             [mount.core :as mount :refer [defstate]]
+            [config :as c]
             [sundry :refer [when-let*]]
             [threads :as t])
   (:import org.eclipse.jetty.client.HttpClient
@@ -52,18 +53,18 @@
     (.enableMarkdown enable-markdown)))
 
 (defn- register-bot-commands []
-  (println "Registering Telegram bot commands...")
+  (log/info "Registering Telegram bot commands...")
   (let [bot-commands (for [[_ [cmd-str desc-str]] commands]
                        (BotCommand. cmd-str desc-str))
         set-commands-request (SetMyCommands. bot-commands (BotCommandScopeDefault.) nil)]
     (try
       (exec set-commands-request)
-      (println "Successfully registered bot commands.")
+      (log/info "Successfully registered bot commands.")
       (catch TelegramApiException e
         (.printStackTrace e)))))
 
 (defn- start-http-client []
-  (println "Starting Telegram HTTP client...")
+  (log/info "Starting Telegram HTTP client...")
   (-> (HttpClient. (HttpClientTransportOverHTTP. 1))
       (doto
         (.setMaxConnectionsPerDestination max-connections)
@@ -92,12 +93,12 @@
 (defn- start-consumer [{:keys [input-processor-fn]}]
   (register-bot-commands)
   (let [bot (TelegramBotsLongPollingApplication.)]
-    (println "Starting Telegram consumer...")
+    (log/info "Starting Telegram consumer...")
     (.registerBot bot bot-token (create-bot input-processor-fn))
     bot))
 
 (defn- stop-consumer [client]
-  (println "Stopping Telegram consumer...")
+  (log/info "Stopping Telegram consumer...")
   (.close client))
 
 (defstate http-client :start (start-http-client))

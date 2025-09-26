@@ -4,7 +4,7 @@
 
 - [x] Dockerize for deployments
 - [x] Reply to messages
-- [ ] Add logging
+- [x] Add logging
 - [x] Telegram HTTP client should use Virtual Threads
 - [x] Nicer abstraction between OpenAI and Telegram (avoid coupling)
 - [ ] Allowlist users who can access the bot
