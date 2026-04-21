@@ -17,7 +17,7 @@ RUN cp resources/secrets.sample.edn resources/secrets.edn
 RUN clojure -X:build uber
 
 # --- Run Stage ---
-FROM openjdk:23-slim
+FROM eclipse-temurin:23-jre-alpine
 
 WORKDIR /app
 
